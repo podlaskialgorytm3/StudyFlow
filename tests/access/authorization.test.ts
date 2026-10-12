@@ -55,7 +55,7 @@ describe('Access Control and Session Security', () => {
       role: Role.STUDENT,
     };
 
-    const isAdmin = studentUser.role === Role.ADMIN;
+    const isAdmin = (studentUser.role as Role) === Role.ADMIN;
     expect(isAdmin).toBe(false);
   });
 

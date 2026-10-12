@@ -4,7 +4,7 @@ export type EisenhowerQuadrant = 'Q1_IMPORTANT_URGENT' | 'Q2_IMPORTANT_NOT_URGEN
 
 export interface EisenhowerTaskInput {
   storyPoints: number;
-  dueDate: Date | string | null;
+  dueDate?: Date | string | null;
   priorityOverride?: PriorityOverride | null;
   urgencyOverride?: UrgencyOverride | null;
   status: TaskStatus;
@@ -34,7 +34,7 @@ export interface EisenhowerClassification {
  * Uses calendar days (midnight to midnight) to avoid daylight saving time / timezone hour glitches.
  */
 export function getCalendarDaysRemaining(
-  dueDate: Date | string | null,
+  dueDate?: Date | string | null,
   referenceDate: Date = new Date()
 ): number | null {
   if (!dueDate) return null;
