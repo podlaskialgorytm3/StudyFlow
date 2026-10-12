@@ -143,3 +143,4 @@ Aplikacja spełnia standardy Progressive Web App:
    npm run init-admin
    ```
 Aplikacja jest w pełni gotowa do pracy produkcyjnej z bezpiecznym HTTPS i obsługą sesji `HttpOnly`.
+
