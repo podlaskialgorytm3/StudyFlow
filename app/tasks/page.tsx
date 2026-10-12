@@ -26,6 +26,8 @@ import {
   CircularProgress,
   InputAdornment,
   Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
@@ -35,10 +37,13 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EditNoteIcon from '@mui/icons-material/EditNote';
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
+import TableRowsIcon from '@mui/icons-material/TableRows';
 
 import AppNavbar from '@/components/Navigation/AppNavbar';
 import TaskFormDialog, { TaskItem, SubjectItem } from '@/components/Tasks/TaskFormDialog';
 import TaskDetailDialog from '@/components/Tasks/TaskDetailDialog';
+import TaskKanbanBoard from '@/components/Tasks/TaskKanbanBoard';
 import {
   classifyEisenhowerTask,
   EisenhowerSettings,
@@ -62,10 +67,14 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<string>('dueDate'); // 'dueDate', 'storyPoints', 'createdAt'
 
+  // View mode: 'kanban' or 'table'
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+
   // Dialogs
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [detailTask, setDetailTask] = useState<TaskItem | null>(null);
+  const [initialStatusForNew, setInitialStatusForNew] = useState<TaskStatus | undefined>(undefined);
 
   const fetchData = useCallback(async () => {
     try {
@@ -163,6 +172,29 @@ export default function TasksPage() {
     }
   };
 
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    // Optimistic local update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      fetchData();
+    } catch {
+      fetchData();
+    }
+  };
+
+  const handleAddTaskToStatus = (status: TaskStatus) => {
+    setEditingTask(null);
+    setInitialStatusForNew(status);
+    setFormOpen(true);
+  };
+
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
@@ -196,17 +228,37 @@ export default function TasksPage() {
             </Typography>
           </Box>
 
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setEditingTask(null);
-              setFormOpen(true);
-            }}
-          >
-            Dodaj zadanie
-          </Button>
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(_, val) => val && setViewMode(val)}
+              size="small"
+              sx={{ bgcolor: 'white' }}
+            >
+              <ToggleButton value="kanban" aria-label="Tablica kolumnowa">
+                <ViewKanbanIcon sx={{ mr: 0.75, fontSize: 20 }} />
+                Kolumny (Kanban)
+              </ToggleButton>
+              <ToggleButton value="table" aria-label="Tabela zadań">
+                <TableRowsIcon sx={{ mr: 0.75, fontSize: 20 }} />
+                Tabela
+              </ToggleButton>
+            </ToggleButtonGroup>
+
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setEditingTask(null);
+                setInitialStatusForNew(undefined);
+                setFormOpen(true);
+              }}
+            >
+              Dodaj zadanie
+            </Button>
+          </Stack>
         </Stack>
 
         {/* Filter Card */}
@@ -302,7 +354,7 @@ export default function TasksPage() {
           </Grid>
         </Card>
 
-        {/* Task List / Table */}
+        {/* Task List / Kanban / Table */}
         {filteredTasks.length === 0 ? (
           <Card sx={{ p: 6, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -316,12 +368,26 @@ export default function TasksPage() {
               startIcon={<AddIcon />}
               onClick={() => {
                 setEditingTask(null);
+                setInitialStatusForNew(undefined);
                 setFormOpen(true);
               }}
             >
               Utwórz zadanie
             </Button>
           </Card>
+        ) : viewMode === 'kanban' ? (
+          <TaskKanbanBoard
+            tasks={filteredTasks}
+            settings={settings}
+            onSelectTask={(t) => setDetailTask(t)}
+            onEditTask={(t) => {
+              setEditingTask(t);
+              setFormOpen(true);
+            }}
+            onDeleteTask={handleDelete}
+            onStatusChange={handleStatusChange}
+            onAddTaskToStatus={handleAddTaskToStatus}
+          />
         ) : (
           <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
             <Table>
@@ -529,6 +595,7 @@ export default function TasksPage() {
         onClose={() => setFormOpen(false)}
         onSaved={fetchData}
         initialTask={editingTask}
+        initialStatus={initialStatusForNew}
         subjects={subjects}
       />
 
