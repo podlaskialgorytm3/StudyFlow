@@ -1,0 +1,112 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum TaskStatus {
+  NEW
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum PriorityOverride {
+  IMPORTANT
+  NOT_IMPORTANT
+}
+
+enum UrgencyOverride {
+  URGENT
+  NOT_URGENT
+}
+
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  passwordHash String
+  role         Role          @default(STUDENT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  settings     UserSettings?
+  subjects     Subject[]
+  categories   Category[]
+  tasks        Task[]
+
+  @@map("users")
+}
+
+model UserSettings {
+  id                           String   @id @default(uuid())
+  userId                       String   @unique
+  user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importantStoryPointsThreshold Int      @default(6)
+  urgentWithinDays             Int      @default(3)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model Subject {
+  id          String     @id @default(uuid())
+  ownerId     String
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  color       String?
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  categories  Category[]
+  tasks       Task[]
+
+  @@map("subjects")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       Task[]
+
+  @@map("categories")
+}
+
+model Task {
+  id               String            @id @default(uuid())
+  ownerId          String
+  owner            User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  subjectId        String
+  subject          Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  categoryId       String?
+  category         Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  title            String
+  description      String?
+  dueDate          DateTime?
+  storyPoints      Int               @default(1)
+  status           TaskStatus        @default(NEW)
+  priorityOverride PriorityOverride?
+  urgencyOverride  UrgencyOverride?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  completedAt      DateTime?
+
+  @@map("tasks")
+}
