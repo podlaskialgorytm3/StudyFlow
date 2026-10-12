@@ -109,3 +109,4 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
 
   return NextResponse.json({ success: true });
 }
+

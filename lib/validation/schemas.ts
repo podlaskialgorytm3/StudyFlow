@@ -75,3 +75,4 @@ export const settingsSchema = z.object({
     .min(0, 'Próg pilności w dniach nie może być ujemny')
     .max(365, 'Maksymalny próg to 365 dni'),
 });
+

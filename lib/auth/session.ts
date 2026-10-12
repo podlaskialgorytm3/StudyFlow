@@ -100,3 +100,4 @@ export async function requireAdmin(): Promise<SessionPayload> {
   }
   return user;
 }
+

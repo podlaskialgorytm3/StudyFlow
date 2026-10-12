@@ -60,3 +60,4 @@ export function NextAppDirEmotionCacheProvider(props: NextAppDirEmotionCacheProv
 
   return <CacheProvider value={cache}>{children}</CacheProvider>;
 }
+
