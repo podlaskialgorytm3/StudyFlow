@@ -52,6 +52,7 @@ interface TaskFormDialogProps {
   onClose: () => void;
   onSaved: () => void;
   initialTask?: TaskItem | null;
+  initialStatus?: TaskStatus;
   subjects: SubjectItem[];
 }
 
@@ -60,6 +61,7 @@ export default function TaskFormDialog({
   onClose,
   onSaved,
   initialTask,
+  initialStatus,
   subjects,
 }: TaskFormDialogProps) {
   const [title, setTitle] = useState('');
@@ -110,12 +112,12 @@ export default function TaskFormDialog({
       setDueDate(`${y}-${m}-${day}`);
       setHasDueDate(true);
       setStoryPoints(3);
-      setStatus(TaskStatus.NEW);
+      setStatus(initialStatus || TaskStatus.NEW);
       setPriorityOverride('AUTO');
       setUrgencyOverride('AUTO');
     }
     setError(null);
-  }, [initialTask, open, subjects]);
+  }, [initialTask, initialStatus, open, subjects]);
 
   const selectedSubject = subjects.find((s) => s.id === subjectId);
   const availableCategories = selectedSubject?.categories || [];
