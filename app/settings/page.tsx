@@ -15,11 +15,22 @@ import {
   Divider,
   CircularProgress,
   Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import TuneIcon from '@mui/icons-material/Tune';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import DateRangeIcon from '@mui/icons-material/DateRange';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import SyncIcon from '@mui/icons-material/Sync';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
 import AppNavbar from '@/components/Navigation/AppNavbar';
 
 export default function SettingsPage() {
@@ -33,6 +44,39 @@ export default function SettingsPage() {
   const [importantThreshold, setImportantThreshold] = useState<number>(6);
   const [urgentDays, setUrgentDays] = useState<number>(3);
   const [taskHorizonDays, setTaskHorizonDays] = useState<number>(7);
+  const [calendarShowGoogleEvents, setCalendarShowGoogleEvents] = useState<boolean>(true);
+  const [calendarShowStudyFlowTasks, setCalendarShowStudyFlowTasks] = useState<boolean>(true);
+
+  // Google Calendar state
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleAccount, setGoogleAccount] = useState<{
+    googleEmail?: string | null;
+    selectedCalendarId: string;
+    selectedCalendarName?: string | null;
+    syncFrequencyHours: number;
+    lastSyncAt?: string | null;
+    lastSyncStatus?: string | null;
+    lastSyncError?: string | null;
+  } | null>(null);
+  const [googleCalendars, setGoogleCalendars] = useState<Array<{ id: string; summary: string; primary?: boolean }>>([]);
+  const [googleConfigured, setGoogleConfigured] = useState(true);
+  const [googleSyncing, setGoogleSyncing] = useState(false);
+  const [googleMsg, setGoogleMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const fetchGoogleData = async () => {
+    try {
+      const gRes = await fetch('/api/calendar/google/account');
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        setGoogleConnected(gData.connected);
+        setGoogleConfigured(gData.isConfigured);
+        setGoogleAccount(gData.account);
+        setGoogleCalendars(gData.calendars || []);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -55,7 +99,15 @@ export default function SettingsPage() {
           if (s.taskHorizonDays !== undefined && s.taskHorizonDays !== null) {
             setTaskHorizonDays(s.taskHorizonDays);
           }
+          if (s.calendarShowGoogleEvents !== undefined) {
+            setCalendarShowGoogleEvents(s.calendarShowGoogleEvents);
+          }
+          if (s.calendarShowStudyFlowTasks !== undefined) {
+            setCalendarShowStudyFlowTasks(s.calendarShowStudyFlowTasks);
+          }
         }
+
+        await fetchGoogleData();
       } catch {
         setError('Błąd wczytywania ustawień');
       } finally {
@@ -80,6 +132,8 @@ export default function SettingsPage() {
           importantStoryPointsThreshold: importantThreshold,
           urgentWithinDays: urgentDays,
           taskHorizonDays: taskHorizonDays,
+          calendarShowGoogleEvents,
+          calendarShowStudyFlowTasks,
         }),
       });
 
@@ -93,6 +147,61 @@ export default function SettingsPage() {
       setError('Błąd połączenia z serwerem');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    if (!window.confirm('Czy na pewno chcesz odłączyć konto Google Calendar? Lokalne wydarzenia zostaną usunięte.')) return;
+    try {
+      const res = await fetch('/api/calendar/google/account', { method: 'DELETE' });
+      if (res.ok) {
+        setGoogleMsg({ type: 'success', text: 'Odłączono konto Google Calendar' });
+        await fetchGoogleData();
+      } else {
+        setGoogleMsg({ type: 'error', text: 'Błąd podczas odłączania konta' });
+      }
+    } catch {
+      setGoogleMsg({ type: 'error', text: 'Błąd połączenia' });
+    }
+  };
+
+  const handleUpdateGoogleCalendarPreferences = async (calendarId: string, frequencyHours: number) => {
+    const selectedCal = googleCalendars.find((c) => c.id === calendarId);
+    try {
+      const res = await fetch('/api/calendar/google/account', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          selectedCalendarId: calendarId,
+          selectedCalendarName: selectedCal?.summary || calendarId,
+          syncFrequencyHours: frequencyHours,
+        }),
+      });
+      if (res.ok) {
+        setGoogleMsg({ type: 'success', text: 'Zapisano preferencje kalendarza Google' });
+        await fetchGoogleData();
+      }
+    } catch {
+      setGoogleMsg({ type: 'error', text: 'Błąd aktualizacji kalendarza' });
+    }
+  };
+
+  const handleSyncGoogleNow = async () => {
+    setGoogleSyncing(true);
+    setGoogleMsg(null);
+    try {
+      const res = await fetch('/api/calendar/google/sync', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setGoogleMsg({ type: 'success', text: data.message || 'Zsynchronizowano kalendarz' });
+        await fetchGoogleData();
+      } else {
+        setGoogleMsg({ type: 'error', text: data.error || 'Błąd synchronizacji' });
+      }
+    } catch {
+      setGoogleMsg({ type: 'error', text: 'Błąd połączenia podczas synchronizacji' });
+    } finally {
+      setGoogleSyncing(false);
     }
   };
 
@@ -304,6 +413,224 @@ export default function SettingsPage() {
                         />
                       ))}
                     </Stack>
+                  </Stack>
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Google Calendar Integration Card */}
+            <Card id="google-calendar" sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
+              <CardContent>
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+                  <CalendarMonthIcon sx={{ color: '#4285F4' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Integracja z Google Calendar
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Połącz swoje konto Google, aby synchronizować wydarzenia z wybranego kalendarza oraz przeglądać je w tygodniowym widoku Kalendarza obok zadań StudyFlow.
+                </Typography>
+                <Divider sx={{ mb: 3 }} />
+
+                {googleMsg && (
+                  <Alert severity={googleMsg.type} sx={{ mb: 2.5 }} onClose={() => setGoogleMsg(null)}>
+                    {googleMsg.text}
+                  </Alert>
+                )}
+
+                {!googleConfigured && (
+                  <Alert severity="warning" sx={{ mb: 2.5 }}>
+                    Integracja Google OAuth wymaga skonfigurowania zmiennych środowiskowych <code>GOOGLE_CLIENT_ID</code> oraz <code>GOOGLE_CLIENT_SECRET</code> w pliku <code>.env</code>.
+                  </Alert>
+                )}
+
+                {/* Status & Connect / Disconnect */}
+                <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', mb: 3 }}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    justifyContent="space-between"
+                    alignItems={{ sm: 'center' }}
+                    spacing={2}
+                  >
+                    <Box>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                          Status konta Google:
+                        </Typography>
+                        <Chip
+                          icon={googleConnected ? <CheckCircleIcon /> : undefined}
+                          label={googleConnected ? 'Połączono' : 'Niepołączono'}
+                          color={googleConnected ? 'success' : 'default'}
+                          size="small"
+                          sx={{ fontWeight: 700 }}
+                        />
+                      </Stack>
+                      {googleConnected && googleAccount?.googleEmail && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          Zalogowany jako: <strong>{googleAccount.googleEmail}</strong>
+                        </Typography>
+                      )}
+                    </Box>
+
+                    <Stack direction="row" spacing={1}>
+                      {googleConnected ? (
+                        <>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            startIcon={googleSyncing ? <CircularProgress size={16} color="inherit" /> : <SyncIcon />}
+                            onClick={handleSyncGoogleNow}
+                            disabled={googleSyncing}
+                          >
+                            {googleSyncing ? 'Synchronizuję...' : 'Synchronizuj'}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            startIcon={<LinkOffIcon />}
+                            onClick={handleDisconnectGoogle}
+                          >
+                            Odłącz konto
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          component="a"
+                          href="/api/auth/google?returnTo=/settings"
+                          variant="contained"
+                          size="small"
+                          startIcon={<LinkIcon />}
+                          sx={{ bgcolor: '#4285F4', '&:hover': { bgcolor: '#3367d6' }, fontWeight: 700 }}
+                          disabled={!googleConfigured}
+                        >
+                          Połącz z Google
+                        </Button>
+                      )}
+                    </Stack>
+                  </Stack>
+
+                  {/* Sync status & error meta */}
+                  {googleConnected && (
+                    <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid #e2e8f0' }}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="space-between">
+                        <Typography variant="caption" color="text.secondary">
+                          Ostatnia synchronizacja:{' '}
+                          <strong>
+                            {googleAccount?.lastSyncAt
+                              ? new Date(googleAccount.lastSyncAt).toLocaleString('pl-PL')
+                              : 'Jeszcze nie przeprowadzono'}
+                          </strong>
+                        </Typography>
+                        {googleAccount?.lastSyncStatus && (
+                          <Typography variant="caption" sx={{ color: googleAccount.lastSyncStatus === 'SUCCESS' ? 'success.main' : 'error.main', fontWeight: 700 }}>
+                            Status: {googleAccount.lastSyncStatus}
+                          </Typography>
+                        )}
+                      </Stack>
+                      {googleAccount?.lastSyncError && (
+                        <Alert severity="error" variant="outlined" sx={{ mt: 1, py: 0 }}>
+                          {googleAccount.lastSyncError}
+                        </Alert>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Calendar Preferences (if connected) */}
+                {googleConnected && (
+                  <Stack spacing={2.5}>
+                    <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+                        Wybór kalendarza do synchronizacji
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Wybierz kalendarz ze swojego konta Google, z którego wydarzenia mają pojawiać się w StudyFlow:
+                      </Typography>
+
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Kalendarz Google</InputLabel>
+                        <Select
+                          label="Kalendarz Google"
+                          value={googleAccount?.selectedCalendarId || 'primary'}
+                          onChange={(e) =>
+                            handleUpdateGoogleCalendarPreferences(
+                              e.target.value,
+                              googleAccount?.syncFrequencyHours || 3
+                            )
+                          }
+                        >
+                          {googleCalendars.map((cal) => (
+                            <MenuItem key={cal.id} value={cal.id}>
+                              {cal.summary} {cal.primary ? '(Domyślny / Główny)' : ''}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
+
+                    {/* Frequency selector */}
+                    <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+                        Częstotliwość automatycznej synchronizacji
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Jak często serwer ma automatycznie sprawdzać zmiany i nowe wydarzenia w Google Calendar:
+                      </Typography>
+
+                      <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel>Częstotliwość</InputLabel>
+                        <Select
+                          label="Częstotliwość"
+                          value={googleAccount?.syncFrequencyHours || 3}
+                          onChange={(e) =>
+                            handleUpdateGoogleCalendarPreferences(
+                              googleAccount?.selectedCalendarId || 'primary',
+                              Number(e.target.value)
+                            )
+                          }
+                        >
+                          <MenuItem value={1}>Co 1 godzinę</MenuItem>
+                          <MenuItem value={3}>Co 3 godziny (Domyślnie)</MenuItem>
+                          <MenuItem value={6}>Co 6 godzin</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  </Stack>
+                )}
+
+                {/* Calendar Visibility Options */}
+                <Box sx={{ mt: 3, p: 2.5, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+                    Domyślna widoczność w widoku kalendarza
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Zarządzaj tym, które źródła danych są domyślnie aktywne na stronie <code>/calendar</code>:
+                  </Typography>
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={calendarShowGoogleEvents}
+                          onChange={(e) => setCalendarShowGoogleEvents(e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label="Wyświetlaj wydarzenia Google"
+                    />
+
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={calendarShowStudyFlowTasks}
+                          onChange={(e) => setCalendarShowStudyFlowTasks(e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label="Wyświetlaj zadania StudyFlow"
+                    />
                   </Stack>
                 </Box>
               </CardContent>
