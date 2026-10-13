@@ -24,6 +24,9 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RotateLeftIcon from '@mui/icons-material/RotateLeft';
 import SwapCallsIcon from '@mui/icons-material/SwapCalls';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import CircularProgress from '@mui/material/CircularProgress';
 import Link from 'next/link';
 import { TaskItem } from './TaskFormDialog';
 import { formatHumanDuration } from '@/lib/utils/formatTime';
@@ -55,11 +58,55 @@ export default function TaskDetailDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [moveMenuAnchor, setMoveMenuAnchor] = useState<null | HTMLElement>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleMsg, setGoogleMsg] = useState<{ type: 'success' | 'error' | 'warning'; text: string; needAuth?: boolean } | null>(null);
 
   if (!task) return null;
 
   const classification = classifyEisenhowerTask(task, settings);
   const qInfo = QUADRANT_CONFIG[classification.quadrant];
+
+  const handlePushToGoogle = async () => {
+    setGoogleLoading(true);
+    setGoogleMsg(null);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/google-calendar`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setGoogleMsg({ type: 'success', text: 'Pomyślnie przesłano zadanie do Google Calendar!' });
+        onRefresh();
+      } else {
+        setGoogleMsg({
+          type: data.code === 'INSUFFICIENT_SCOPES' ? 'warning' : 'error',
+          text: data.error || 'Błąd przesyłania do Google Calendar',
+          needAuth: data.code === 'INSUFFICIENT_SCOPES',
+        });
+      }
+    } catch {
+      setGoogleMsg({ type: 'error', text: 'Błąd połączenia z serwerem' });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleRemoveFromGoogle = async () => {
+    setGoogleLoading(true);
+    setGoogleMsg(null);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/google-calendar`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        setGoogleMsg({ type: 'success', text: 'Usunięto zadanie z Google Calendar' });
+        onRefresh();
+      } else {
+        setGoogleMsg({ type: 'error', text: data.error || 'Błąd usuwania z Google Calendar' });
+      }
+    } catch {
+      setGoogleMsg({ type: 'error', text: 'Błąd połączenia z serwerem' });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleToggleDone = async () => {
     setLoading(true);
@@ -360,6 +407,81 @@ export default function TaskDetailDialog({
               </Typography>
             )}
           </Box>
+
+          {/* Google Calendar sync status and push button */}
+          {task.dueDate && (
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: task.googleEventId ? 'rgba(66, 133, 244, 0.06)' : '#f8fafc',
+                borderRadius: 2,
+                border: task.googleEventId ? '1px solid #4285F4' : '1px solid #e2e8f0',
+              }}
+            >
+              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  {task.googleEventId ? (
+                    <Chip
+                      icon={<CloudDoneIcon />}
+                      label="W Google Calendar"
+                      color="primary"
+                      size="small"
+                      sx={{ fontWeight: 700 }}
+                    />
+                  ) : (
+                    <Chip
+                      icon={<CloudUploadIcon />}
+                      label="Tylko lokalnie w StudyFlow"
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
+                </Stack>
+
+                {task.googleEventId ? (
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    onClick={handleRemoveFromGoogle}
+                    disabled={googleLoading}
+                  >
+                    {googleLoading ? <CircularProgress size={16} color="inherit" /> : 'Usuń z Google'}
+                  </Button>
+                ) : (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={googleLoading ? <CircularProgress size={16} color="inherit" /> : <CloudUploadIcon />}
+                    onClick={handlePushToGoogle}
+                    disabled={googleLoading}
+                    sx={{ bgcolor: '#4285F4', '&:hover': { bgcolor: '#3367d6' }, fontWeight: 700 }}
+                  >
+                    {googleLoading ? 'Przesyłanie...' : 'Prześlij do Google'}
+                  </Button>
+                )}
+              </Stack>
+
+              {googleMsg && (
+                <Alert severity={googleMsg.type} sx={{ mt: 1.5 }} onClose={() => setGoogleMsg(null)}>
+                  <Typography variant="body2">{googleMsg.text}</Typography>
+                  {googleMsg.needAuth && (
+                    <Box sx={{ mt: 1 }}>
+                      <Button
+                        component="a"
+                        href="/api/auth/google?returnTo=/tasks"
+                        size="small"
+                        variant="contained"
+                        sx={{ bgcolor: '#4285F4', fontWeight: 700 }}
+                      >
+                        Połącz ponownie z uprawnieniem do zapisu
+                      </Button>
+                    </Box>
+                  )}
+                </Alert>
+              )}
+            </Box>
+          )}
 
           {/* Description */}
           {task.description && (

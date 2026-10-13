@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { encryptToken, decryptToken } from '@/lib/crypto/encryption';
 
 const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/calendar.events.readonly',
   'https://www.googleapis.com/auth/calendar.readonly',
   'https://www.googleapis.com/auth/userinfo.email',

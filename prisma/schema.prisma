@@ -170,6 +170,8 @@ model Task {
   timeSpentSeconds Int               @default(0)
   estimatedMinutes Int               @default(60)
   progressPercent  Int               @default(0)
+  googleEventId    String?
+  googleCalendarId String?
 
   timeEntries      TaskTimeEntry[]
 

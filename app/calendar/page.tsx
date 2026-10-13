@@ -34,8 +34,12 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AddIcon from '@mui/icons-material/Add';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import Link from 'next/link';
 import AppNavbar from '@/components/Navigation/AppNavbar';
+import CreateCalendarTaskDialog from '@/components/Calendar/CreateCalendarTaskDialog';
 import type { UnifiedCalendarItem } from '@/app/api/calendar/events/route';
 
 interface CalendarMeta {
@@ -67,6 +71,15 @@ export default function CalendarPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<UnifiedCalendarItem | null>(null);
+
+  // Task creation from calendar
+  const [createTaskOpen, setCreateTaskOpen] = useState(false);
+  const [createTaskDate, setCreateTaskDate] = useState<Date | null>(null);
+
+  // Google Calendar task export state
+  const [exportingGoogle, setExportingGoogle] = useState(false);
+  const [exportError, setExportError] = useState<{ message: string; needAuth?: boolean } | null>(null);
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
   // Filter toggles
   const [filterGoogle, setFilterGoogle] = useState(true);
@@ -151,6 +164,89 @@ export default function CalendarPage() {
       setSyncMessage('Błąd połączenia podczas synchronizacji');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  // Open task creator
+  const handleOpenCreateTask = () => {
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    setCreateTaskDate(d);
+    setCreateTaskOpen(true);
+  };
+
+  const handleHourClick = (d: Date, hour: number) => {
+    const target = new Date(d);
+    target.setHours(hour, 0, 0, 0);
+    setCreateTaskDate(target);
+    setCreateTaskOpen(true);
+  };
+
+  // Push task to Google Calendar
+  const handlePushTaskToGoogle = async (taskId: string) => {
+    setExportingGoogle(true);
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/google-calendar`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setExportSuccess('Pomyślnie przesłano zadanie do Google Calendar!');
+        await fetchEvents();
+        if (selectedEvent?.studyflowMeta) {
+          setSelectedEvent({
+            ...selectedEvent,
+            studyflowMeta: {
+              ...selectedEvent.studyflowMeta,
+              googleEventId: data.googleEventId,
+            },
+          });
+        }
+      } else {
+        setExportError({
+          message: data.error || 'Nie udało się przesłać zadania do Google Calendar',
+          needAuth: data.code === 'INSUFFICIENT_SCOPES',
+        });
+      }
+    } catch {
+      setExportError({ message: 'Błąd połączenia z serwerem' });
+    } finally {
+      setExportingGoogle(false);
+    }
+  };
+
+  // Remove task from Google Calendar
+  const handleRemoveTaskFromGoogle = async (taskId: string) => {
+    setExportingGoogle(true);
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/google-calendar`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setExportSuccess('Usunięto wydarzenie z Google Calendar');
+        await fetchEvents();
+        if (selectedEvent?.studyflowMeta) {
+          setSelectedEvent({
+            ...selectedEvent,
+            studyflowMeta: {
+              ...selectedEvent.studyflowMeta,
+              googleEventId: null,
+            },
+          });
+        }
+      } else {
+        setExportError({ message: data.error || 'Błąd usuwania z Google Calendar' });
+      }
+    } catch {
+      setExportError({ message: 'Błąd połączenia z serwerem' });
+    } finally {
+      setExportingGoogle(false);
     }
   };
 
@@ -307,11 +403,22 @@ export default function CalendarPage() {
               </ToggleButtonGroup>
             </Stack>
 
-            {/* Right: Sync & Filters */}
+            {/* Right: Add Task, Sync & Connect */}
             <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={handleOpenCreateTask}
+                sx={{ fontWeight: 700 }}
+              >
+                Dodaj zadanie
+              </Button>
+
               {meta?.googleConnected ? (
                 <Button
-                  variant="contained"
+                  variant="outlined"
                   color="primary"
                   size="small"
                   startIcon={syncing ? <CircularProgress size={16} color="inherit" /> : <SyncIcon />}
@@ -319,7 +426,7 @@ export default function CalendarPage() {
                   disabled={syncing}
                   sx={{ fontWeight: 700 }}
                 >
-                  {syncing ? 'Synchronizuję...' : 'Synchronizuj teraz'}
+                  {syncing ? 'Synchronizuję...' : 'Synchronizuj z Google'}
                 </Button>
               ) : (
                 <Button
@@ -562,10 +669,17 @@ export default function CalendarPage() {
                     {HOURS.map((hour) => (
                       <Box
                         key={`line_${hour}`}
+                        onClick={() => handleHourClick(d, hour)}
                         sx={{
                           height: 60,
                           borderBottom: '1px solid #f1f5f9',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.15s ease',
+                          '&:hover': {
+                            bgcolor: 'rgba(37, 99, 235, 0.05)',
+                          },
                         }}
+                        title={`Kliknij, aby dodać zadanie (${String(hour).padStart(2, '0')}:00)`}
                       />
                     ))}
 
@@ -738,7 +852,7 @@ export default function CalendarPage() {
                       <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#065f46', mb: 1 }}>
                         Szczegóły zadania akademickiego:
                       </Typography>
-                      <Stack direction="row" spacing={1.5} flexWrap="wrap">
+                      <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
                         <Chip
                           size="small"
                           label={`Status: ${selectedEvent.studyflowMeta.status}`}
@@ -754,33 +868,111 @@ export default function CalendarPage() {
                           label={`Postęp: ${selectedEvent.studyflowMeta.progressPercent}%`}
                           variant="outlined"
                         />
+                        {selectedEvent.studyflowMeta.googleEventId ? (
+                          <Chip
+                            icon={<CloudDoneIcon />}
+                            label="W Google Calendar"
+                            color="primary"
+                            size="small"
+                            sx={{ fontWeight: 700 }}
+                          />
+                        ) : meta?.googleConnected ? (
+                          <Chip
+                            icon={<CloudUploadIcon />}
+                            label="Tylko lokalnie"
+                            size="small"
+                            variant="outlined"
+                          />
+                        ) : null}
                       </Stack>
+
+                      {/* Export messages */}
+                      {exportSuccess && (
+                        <Alert severity="success" sx={{ mb: 1 }} onClose={() => setExportSuccess(null)}>
+                          {exportSuccess}
+                        </Alert>
+                      )}
+
+                      {exportError && (
+                        <Alert severity="warning" sx={{ mb: 1 }} onClose={() => setExportError(null)}>
+                          <Typography variant="body2">{exportError.message}</Typography>
+                          {exportError.needAuth && (
+                            <Box sx={{ mt: 1 }}>
+                              <Button
+                                component="a"
+                                href="/api/auth/google?returnTo=/calendar"
+                                size="small"
+                                variant="contained"
+                                sx={{ bgcolor: '#4285F4', fontWeight: 700 }}
+                              >
+                                Połącz ponownie z uprawnieniem do zapisu
+                              </Button>
+                            </Box>
+                          )}
+                        </Alert>
+                      )}
                     </Box>
                   )}
                 </Stack>
               </DialogContent>
 
-              <DialogActions sx={{ px: 3, py: 2, justifyContent: 'space-between' }}>
-                <Button onClick={() => setSelectedEvent(null)} color="inherit">
+              <DialogActions sx={{ px: 3, py: 2, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                <Button onClick={() => { setSelectedEvent(null); setExportError(null); setExportSuccess(null); }} color="inherit">
                   Zamknij
                 </Button>
 
-                {selectedEvent.url && (
-                  <Button
-                    component={selectedEvent.source === 'studyflow' ? Link : 'a'}
-                    href={selectedEvent.url}
-                    target={selectedEvent.source === 'google' ? '_blank' : undefined}
-                    rel="noreferrer"
-                    variant="contained"
-                    startIcon={<OpenInNewIcon />}
-                  >
-                    {selectedEvent.source === 'google' ? 'Otwórz w Google Calendar' : 'Przejdź do zadania'}
-                  </Button>
-                )}
+                <Stack direction="row" spacing={1} alignItems="center">
+                  {selectedEvent.source === 'studyflow' && selectedEvent.studyflowMeta && meta?.googleConnected && (
+                    selectedEvent.studyflowMeta.googleEventId ? (
+                      <Button
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        onClick={() => handleRemoveTaskFromGoogle(selectedEvent.studyflowMeta!.taskId)}
+                        disabled={exportingGoogle}
+                      >
+                        {exportingGoogle ? <CircularProgress size={16} color="inherit" /> : 'Usuń z Google'}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={exportingGoogle ? <CircularProgress size={16} color="inherit" /> : <CloudUploadIcon />}
+                        onClick={() => handlePushTaskToGoogle(selectedEvent.studyflowMeta!.taskId)}
+                        disabled={exportingGoogle}
+                        sx={{ bgcolor: '#4285F4', '&:hover': { bgcolor: '#3367d6' }, fontWeight: 700 }}
+                      >
+                        {exportingGoogle ? 'Przesyłanie...' : 'Prześlij do Google'}
+                      </Button>
+                    )
+                  )}
+
+                  {selectedEvent.url && (
+                    <Button
+                      component={selectedEvent.source === 'studyflow' ? Link : 'a'}
+                      href={selectedEvent.url}
+                      target={selectedEvent.source === 'google' ? '_blank' : undefined}
+                      rel="noreferrer"
+                      variant="contained"
+                      startIcon={<OpenInNewIcon />}
+                    >
+                      {selectedEvent.source === 'google' ? 'Otwórz w Google Calendar' : 'Przejdź do zadania'}
+                    </Button>
+                  )}
+                </Stack>
               </DialogActions>
             </>
           )}
         </Dialog>
+
+        {/* Create Task Dialog directly on calendar */}
+        <CreateCalendarTaskDialog
+          open={createTaskOpen}
+          onClose={() => setCreateTaskOpen(false)}
+          onSaved={fetchEvents}
+          initialDate={createTaskDate}
+          googleConnected={Boolean(meta?.googleConnected)}
+        />
       </Container>
     </Box>
   );

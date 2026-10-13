@@ -47,6 +47,8 @@ export interface TaskItem {
   timeSpentSeconds?: number;
   estimatedMinutes?: number;
   progressPercent?: number;
+  googleEventId?: string | null;
+  googleCalendarId?: string | null;
   subject?: { id: string; name: string; color?: string | null };
   category?: { id: string; name: string } | null;
 }

@@ -24,6 +24,8 @@ export interface UnifiedCalendarItem {
     storyPoints: number;
     estimatedMinutes: number;
     progressPercent: number;
+    googleEventId?: string | null;
+    googleCalendarId?: string | null;
   };
 }
 
@@ -171,6 +173,8 @@ export async function GET(req: Request) {
           storyPoints: t.storyPoints,
           estimatedMinutes: t.estimatedMinutes,
           progressPercent: t.progressPercent,
+          googleEventId: t.googleEventId,
+          googleCalendarId: t.googleCalendarId,
         },
       });
     }
