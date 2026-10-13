@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -21,10 +21,14 @@ import {
   useMediaQuery,
   useTheme,
   Tooltip,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import BubbleChartIcon from '@mui/icons-material/BubbleChart';
 import { formatHumanDuration } from '@/lib/utils/formatTime';
 import { TaskItem, SubjectItem } from '@/components/Tasks/TaskFormDialog';
 import {
@@ -34,6 +38,7 @@ import {
   QUADRANT_CONFIG,
 } from '@/lib/domain/eisenhower';
 import { TaskStatus } from '@prisma/client';
+import EisenhowerBubbleView from './EisenhowerBubbleView';
 
 interface EisenhowerMatrixProps {
   tasks: TaskItem[];
@@ -51,9 +56,36 @@ export default function EisenhowerMatrix({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
+  const [viewMode, setViewMode] = useState<'cards' | 'bubbles'>('cards');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('ALL');
   const [showDone, setShowDone] = useState(false);
   const [mobileTab, setMobileTab] = useState<number>(0);
+
+  // Restore saved view mode preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('studyflow_eisenhower_view');
+      if (saved === 'cards' || saved === 'bubbles') {
+        setViewMode(saved);
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const handleViewModeChange = (
+    _: React.MouseEvent<HTMLElement>,
+    nextMode: 'cards' | 'bubbles' | null
+  ) => {
+    if (nextMode) {
+      setViewMode(nextMode);
+      try {
+        localStorage.setItem('studyflow_eisenhower_view', nextMode);
+      } catch {
+        // Ignore
+      }
+    }
+  };
 
   // Filter tasks by subject and completion
   const filteredTasks = tasks.filter((t) => {
@@ -209,6 +241,44 @@ export default function EisenhowerMatrix({
         </Box>
 
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+          {/* View Mode Switcher: Karty vs Kropki */}
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            size="small"
+            sx={{
+              bgcolor: '#f1f5f9',
+              p: 0.25,
+              borderRadius: 2,
+              border: '1px solid #e2e8f0',
+              '& .MuiToggleButton-root': {
+                px: 1.5,
+                py: 0.5,
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                textTransform: 'none',
+                color: 'text.secondary',
+                borderRadius: 1.5,
+                border: 'none',
+                '&.Mui-selected': {
+                  bgcolor: 'white',
+                  color: 'primary.main',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                },
+              },
+            }}
+          >
+            <ToggleButton value="cards" aria-label="Widok kart">
+              <ViewModuleIcon fontSize="small" sx={{ mr: 0.75 }} />
+              Karty
+            </ToggleButton>
+            <ToggleButton value="bubbles" aria-label="Widok kropek">
+              <BubbleChartIcon fontSize="small" sx={{ mr: 0.75 }} />
+              Kropki
+            </ToggleButton>
+          </ToggleButtonGroup>
+
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Filtruj przedmiot</InputLabel>
             <Select
@@ -232,8 +302,54 @@ export default function EisenhowerMatrix({
         </Stack>
       </Stack>
 
-      {/* Responsive Rendering */}
-      {isMobile ? (
+      {/* Responsive Rendering: Bubbles View or Cards View */}
+      {viewMode === 'bubbles' ? (
+        <Box>
+          {isMobile && (
+            <Tabs
+              value={mobileTab}
+              onChange={(_, val) => setMobileTab(val)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ mb: 2, borderBottom: '1px solid #e2e8f0' }}
+            >
+              {quadrantKeys.map((qKey) => {
+                const conf = QUADRANT_CONFIG[qKey];
+                const count = quadrantTasks[qKey].length;
+                return (
+                  <Tab
+                    key={qKey}
+                    label={
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <span>{conf.code}</span>
+                        <Chip
+                          label={count}
+                          size="small"
+                          sx={{
+                            height: 18,
+                            fontSize: '0.65rem',
+                            bgcolor: conf.color,
+                            color: '#fff',
+                            fontWeight: 700,
+                          }}
+                        />
+                      </Stack>
+                    }
+                  />
+                );
+              })}
+            </Tabs>
+          )}
+          <EisenhowerBubbleView
+            quadrantTasks={quadrantTasks}
+            settings={settings}
+            subjects={subjects}
+            onSelectTask={onSelectTask}
+            isMobile={isMobile}
+            mobileTab={mobileTab}
+          />
+        </Box>
+      ) : isMobile ? (
         // Mobile Tabbed View
         <Box>
           <Tabs
