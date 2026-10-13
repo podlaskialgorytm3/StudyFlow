@@ -72,3 +72,4 @@ export async function DELETE(
     message: 'Wydarzenie zostało usunięte z Google Calendar',
   });
 }
+
