@@ -192,7 +192,7 @@ export default function TaskDetailDialog({
           {error && <Alert severity="error">{error}</Alert>}
 
           {/* Subject & Category Pills */}
-          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, alignItems: 'center', py: 0.5 }}>
             <Chip
               label={task.subject?.name || 'Przedmiot'}
               sx={{
@@ -221,7 +221,7 @@ export default function TaskDetailDialog({
               color={task.status === TaskStatus.DONE ? 'success' : 'default'}
               sx={{ fontWeight: 600 }}
             />
-          </Stack>
+          </Box>
 
           {/* Eisenhower Quadrant Card */}
           <Box
