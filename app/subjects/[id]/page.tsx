@@ -311,6 +311,85 @@ export default function SubjectDetailsPage() {
           </Stack>
         </Card>
 
+        {/* Time and Progress Statistics KPI Cards */}
+        <Grid container spacing={2.5} sx={{ mb: 4 }}>
+          {/* Total Time Spent */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ p: 2.5, borderRadius: 3, border: '1px solid #e2e8f0', bgcolor: '#ffffff', height: '100%' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: '#e0f2fe', color: '#0284c7', display: 'flex' }}>
+                  <AccessTimeIcon sx={{ fontSize: 28 }} />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    Łączny czas poświęcony na przedmiot
+                  </Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, color: 'primary.main', mt: 0.25 }}>
+                    {formatHumanDuration(timeStats.totalSeconds)}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Card>
+          </Grid>
+
+          {/* Tracked Tasks */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ p: 2.5, borderRadius: 3, border: '1px solid #e2e8f0', bgcolor: '#ffffff', height: '100%' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: '#f0fdf4', color: '#16a34a', display: 'flex' }}>
+                  <TimelapseIcon sx={{ fontSize: 28 }} />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    Zadania ze stoperem
+                  </Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.25 }}>
+                    {timeStats.tasksWithTimeCount} / {subject.tasks.length}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Card>
+          </Grid>
+
+          {/* Average Time per Task */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ p: 2.5, borderRadius: 3, border: '1px solid #e2e8f0', bgcolor: '#ffffff', height: '100%' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: '#fef3c7', color: '#d97706', display: 'flex' }}>
+                  <TrendingUpIcon sx={{ fontSize: 28 }} />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    Średni czas / zadanie
+                  </Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.25 }}>
+                    {timeStats.tasksWithTimeCount > 0 ? formatHumanDuration(timeStats.avgSecondsPerTrackedTask) : '—'}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Card>
+          </Grid>
+
+          {/* Tasks Completed */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ p: 2.5, borderRadius: 3, border: '1px solid #e2e8f0', bgcolor: '#ffffff', height: '100%' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: '#ede9fe', color: '#7c3aed', display: 'flex' }}>
+                  <CheckCircleIcon sx={{ fontSize: 28 }} />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    Ukończone zadania
+                  </Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.25 }}>
+                    {subject.tasks.filter((t) => t.status === TaskStatus.DONE).length} / {subject.tasks.length}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Card>
+          </Grid>
+        </Grid>
+
         <Grid container spacing={3}>
           {/* Categories Column */}
           <Grid item xs={12} md={4}>
@@ -346,10 +425,22 @@ export default function SubjectDetailsPage() {
                         }}
                       >
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                              {cat.name}
-                            </Typography>
+                          <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
+                            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                {cat.name}
+                              </Typography>
+                              {timeStats.timeByCategory[cat.id] > 0 && (
+                                <Chip
+                                  icon={<AccessTimeIcon sx={{ fontSize: '0.75rem !important' }} />}
+                                  label={formatHumanDuration(timeStats.timeByCategory[cat.id])}
+                                  size="small"
+                                  color="primary"
+                                  variant="outlined"
+                                  sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
+                                />
+                              )}
+                            </Stack>
                             {cat.description && (
                               <Typography variant="caption" color="text.secondary">
                                 {cat.description}
@@ -406,8 +497,10 @@ export default function SubjectDetailsPage() {
                           <TableCell sx={{ fontWeight: 700 }}>Zadanie</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Kategoria</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Story Points</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Poświęcony czas</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Termin</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 700 }}>Akcja</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -418,7 +511,7 @@ export default function SubjectDetailsPage() {
                               key={t.id}
                               hover
                               sx={{ cursor: 'pointer', bgcolor: isDone ? '#fafafa' : 'inherit' }}
-                              onClick={() => setDetailTask(t)}
+                              onClick={() => router.push(`/tasks/${t.id}`)}
                             >
                               <TableCell onClick={(e) => { e.stopPropagation(); handleToggleTaskStatus(t); }}>
                                 <IconButton size="small" color={isDone ? 'success' : 'default'}>
@@ -448,6 +541,20 @@ export default function SubjectDetailsPage() {
                                 <Chip label={`${t.storyPoints} SP`} size="small" sx={{ fontWeight: 700 }} />
                               </TableCell>
                               <TableCell>
+                                {t.timeSpentSeconds && t.timeSpentSeconds > 0 ? (
+                                  <Chip
+                                    icon={<AccessTimeIcon sx={{ fontSize: '0.75rem !important' }} />}
+                                    label={formatHumanDuration(t.timeSpentSeconds)}
+                                    size="small"
+                                    color="success"
+                                    variant="outlined"
+                                    sx={{ height: 22, fontSize: '0.7rem', fontWeight: 700 }}
+                                  />
+                                ) : (
+                                  <Typography variant="caption" color="text.disabled">—</Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
                                 <Typography variant="caption">
                                   {t.dueDate ? new Date(t.dueDate).toLocaleDateString('pl-PL') : 'Bez terminu'}
                                 </Typography>
@@ -459,6 +566,16 @@ export default function SubjectDetailsPage() {
                                   color={isDone ? 'success' : 'default'}
                                   sx={{ fontSize: '0.7rem' }}
                                 />
+                              </TableCell>
+                              <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => router.push(`/tasks/${t.id}`)}
+                                  title="Otwórz zadanie i stoper"
+                                >
+                                  <OpenInNewIcon fontSize="small" />
+                                </IconButton>
                               </TableCell>
                             </TableRow>
                           );
