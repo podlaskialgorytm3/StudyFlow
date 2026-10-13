@@ -32,9 +32,11 @@ import StopIcon from '@mui/icons-material/Stop';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AddTaskIcon from '@mui/icons-material/AddTask';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import MoreTimeIcon from '@mui/icons-material/MoreTime';
 import HistoryIcon from '@mui/icons-material/History';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import SchoolIcon from '@mui/icons-material/School';
 import { formatDigitalTime, formatHumanDuration } from '@/lib/utils/formatTime';
 
 export interface TaskTimeEntryItem {
@@ -47,6 +49,9 @@ export interface TaskTimeEntryItem {
 
 interface TaskTimeTrackerProps {
   taskId: string;
+  taskTitle?: string;
+  subjectName?: string;
+  subjectColor?: string;
   initialTimeSpentSeconds?: number;
   initialTimeEntries?: TaskTimeEntryItem[];
   onTimeUpdated?: (newTotalSeconds: number) => void;
@@ -54,6 +59,9 @@ interface TaskTimeTrackerProps {
 
 export default function TaskTimeTracker({
   taskId,
+  taskTitle,
+  subjectName,
+  subjectColor = '#1976d2',
   initialTimeSpentSeconds = 0,
   initialTimeEntries = [],
   onTimeUpdated,
@@ -74,12 +82,39 @@ export default function TaskTimeTracker({
   const [manualMinutes, setManualMinutes] = useState<number>(15);
   const [manualNote, setManualNote] = useState('');
 
+  // Fullscreen Focus Mode state
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
   // Status
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleToggleFullscreen = () => {
+    if (!isFullscreen) {
+      setIsFullscreen(true);
+      if (typeof document !== 'undefined' && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } else {
+      setIsFullscreen(false);
+      if (typeof document !== 'undefined' && document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (typeof document !== 'undefined' && !document.fullscreenElement && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, [isFullscreen]);
 
   // Local storage synchronization for persistent active session
   useEffect(() => {
@@ -272,14 +307,25 @@ export default function TaskTimeTracker({
             </Box>
           </Stack>
 
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<MoreTimeIcon />}
-            onClick={() => setManualDialogOpen(true)}
-          >
-            Odnotuj czas ręcznie
-          </Button>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<FullscreenIcon />}
+              onClick={handleToggleFullscreen}
+              sx={{ fontWeight: 600 }}
+            >
+              Pełny ekran
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<MoreTimeIcon />}
+              onClick={() => setManualDialogOpen(true)}
+            >
+              Odnotuj czas ręcznie
+            </Button>
+          </Stack>
         </Stack>
 
         <Divider sx={{ mb: 3 }} />
@@ -299,6 +345,7 @@ export default function TaskTimeTracker({
         {/* Stopwatch Main Area */}
         <Box
           sx={{
+            position: 'relative',
             p: 3,
             bgcolor: isRunning ? '#f0fdf4' : '#f8fafc',
             border: isRunning ? '2px solid #86efac' : '1px solid #e2e8f0',
@@ -308,6 +355,24 @@ export default function TaskTimeTracker({
             mb: 3,
           }}
         >
+          {/* Quick Fullscreen Button in Corner */}
+          <Tooltip title="Przełącz na pełny ekran (Tryb skupienia)">
+            <IconButton
+              size="small"
+              onClick={handleToggleFullscreen}
+              sx={{
+                position: 'absolute',
+                right: 12,
+                top: 12,
+                bgcolor: 'rgba(255, 255, 255, 0.85)',
+                border: '1px solid #e2e8f0',
+                '&:hover': { bgcolor: 'white' },
+              }}
+            >
+              <FullscreenIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
           {isRunning && (
             <Chip
               label="Stoper aktywny — pomiar czasu w toku..."
@@ -506,7 +571,13 @@ export default function TaskTimeTracker({
         )}
 
         {/* Dialog for saving stopwatch session */}
-        <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)} maxWidth="xs" fullWidth>
+        <Dialog
+          open={saveDialogOpen}
+          onClose={() => setSaveDialogOpen(false)}
+          maxWidth="xs"
+          fullWidth
+          sx={{ zIndex: 1400 }}
+        >
           <DialogTitle sx={{ fontWeight: 700 }}>Zapisz czas sesji</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
@@ -546,7 +617,13 @@ export default function TaskTimeTracker({
         </Dialog>
 
         {/* Dialog for manual time logging */}
-        <Dialog open={manualDialogOpen} onClose={() => setManualDialogOpen(false)} maxWidth="xs" fullWidth>
+        <Dialog
+          open={manualDialogOpen}
+          onClose={() => setManualDialogOpen(false)}
+          maxWidth="xs"
+          fullWidth
+          sx={{ zIndex: 1400 }}
+        >
           <Box component="form" onSubmit={handleSaveManual}>
             <DialogTitle sx={{ fontWeight: 700 }}>Odnotuj czas ręcznie</DialogTitle>
             <DialogContent>
@@ -594,6 +671,270 @@ export default function TaskTimeTracker({
               </Button>
             </DialogActions>
           </Box>
+        </Dialog>
+
+        {/* Fullscreen Focus Mode Dialog */}
+        <Dialog
+          fullScreen
+          open={isFullscreen}
+          onClose={handleToggleFullscreen}
+          sx={{
+            zIndex: 1300,
+            '& .MuiDialog-paper': {
+              bgcolor: '#090e17',
+              color: '#f8fafc',
+              backgroundImage: `radial-gradient(circle at 50% 30%, ${subjectColor}28 0%, #090e17 75%)`,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              p: { xs: 3, sm: 6 },
+            },
+          }}
+        >
+          {/* Fullscreen Top Header */}
+          <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              {subjectName && (
+                <Chip
+                  icon={<SchoolIcon sx={{ fontSize: '1rem !important', color: 'inherit !important' }} />}
+                  label={subjectName}
+                  sx={{
+                    bgcolor: subjectColor,
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                  }}
+                />
+              )}
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#f8fafc' }}>
+                {taskTitle || 'Zadanie'}
+              </Typography>
+            </Stack>
+
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<FullscreenExitIcon />}
+              onClick={handleToggleFullscreen}
+              sx={{
+                borderColor: 'rgba(255, 255, 255, 0.25)',
+                color: '#f8fafc',
+                fontWeight: 600,
+                borderRadius: 2,
+                '&:hover': {
+                  borderColor: '#ffffff',
+                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                },
+              }}
+            >
+              Wyjdź z pełnego ekranu (Esc)
+            </Button>
+          </Stack>
+
+          {/* Fullscreen Main Center Area */}
+          <Box sx={{ textAlign: 'center', my: 'auto', py: 4 }}>
+            {isRunning ? (
+              <Chip
+                label="TRYB SKUPIENIA — POMIAR CZASU W TOKU"
+                color="success"
+                sx={{
+                  fontWeight: 800,
+                  letterSpacing: 2,
+                  px: 2.5,
+                  py: 2,
+                  fontSize: '0.85rem',
+                  mb: 3,
+                  animation: 'pulse 1.5s infinite',
+                }}
+              />
+            ) : timerSeconds > 0 ? (
+              <Chip
+                label="POMIAR WSTRZYMANY (PAUZA)"
+                color="warning"
+                sx={{
+                  fontWeight: 800,
+                  letterSpacing: 2,
+                  px: 2.5,
+                  py: 2,
+                  fontSize: '0.85rem',
+                  mb: 3,
+                }}
+              />
+            ) : (
+              <Chip
+                label="TRYB SKUPIENIA — GOTOWY DO ROZPOCZĘCIA"
+                variant="outlined"
+                sx={{
+                  fontWeight: 800,
+                  letterSpacing: 2,
+                  px: 2.5,
+                  py: 2,
+                  fontSize: '0.85rem',
+                  mb: 3,
+                  color: '#94a3b8',
+                  borderColor: '#475569',
+                }}
+              />
+            )}
+
+            {/* Giant Digital Stopwatch Clock */}
+            <Typography
+              variant="h1"
+              component="div"
+              sx={{
+                fontWeight: 900,
+                fontFamily: 'monospace',
+                letterSpacing: { xs: 4, sm: 8, md: 12 },
+                fontSize: { xs: '3.6rem', sm: '7rem', md: '9.5rem' },
+                color: isRunning ? '#4ade80' : timerSeconds > 0 ? '#fde047' : '#f8fafc',
+                textShadow: isRunning ? '0 0 50px rgba(74, 222, 128, 0.4)' : 'none',
+                lineHeight: 1.1,
+                my: 2,
+              }}
+            >
+              {formatDigitalTime(timerSeconds)}
+            </Typography>
+
+            <Typography variant="h6" sx={{ color: '#94a3b8', fontWeight: 500, mb: 5 }}>
+              Czas bieżącej sesji:{' '}
+              <strong style={{ color: '#ffffff', fontWeight: 800 }}>
+                {formatHumanDuration(timerSeconds)}
+              </strong>
+            </Typography>
+
+            {/* Huge Controls in Fullscreen */}
+            <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
+              {!isRunning && timerSeconds === 0 && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  startIcon={<PlayArrowIcon sx={{ fontSize: '2.2rem !important' }} />}
+                  onClick={handleStart}
+                  sx={{
+                    px: 6,
+                    py: 2,
+                    fontSize: '1.25rem',
+                    fontWeight: 800,
+                    borderRadius: 3,
+                    boxShadow: '0 8px 30px rgba(25, 118, 210, 0.5)',
+                  }}
+                >
+                  Zacznij mierzyć czas
+                </Button>
+              )}
+
+              {isRunning && (
+                <>
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    size="large"
+                    startIcon={<PauseIcon sx={{ fontSize: '1.8rem !important' }} />}
+                    onClick={handlePause}
+                    sx={{
+                      px: 4.5,
+                      py: 1.8,
+                      fontSize: '1.15rem',
+                      fontWeight: 700,
+                      borderRadius: 3,
+                      bgcolor: 'rgba(237, 108, 2, 0.15)',
+                      borderColor: '#ed6c02',
+                    }}
+                  >
+                    Wstrzymaj (Pauza)
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    size="large"
+                    startIcon={<StopIcon sx={{ fontSize: '1.8rem !important' }} />}
+                    onClick={handleOpenSaveDialog}
+                    sx={{
+                      px: 5.5,
+                      py: 1.8,
+                      fontSize: '1.15rem',
+                      fontWeight: 800,
+                      borderRadius: 3,
+                      boxShadow: '0 8px 30px rgba(46, 125, 50, 0.5)',
+                    }}
+                  >
+                    Zakończ i zapisz czas
+                  </Button>
+                </>
+              )}
+
+              {!isRunning && timerSeconds > 0 && (
+                <>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    startIcon={<PlayArrowIcon sx={{ fontSize: '1.8rem !important' }} />}
+                    onClick={handleResume}
+                    sx={{
+                      px: 4.5,
+                      py: 1.8,
+                      fontSize: '1.15rem',
+                      fontWeight: 800,
+                      borderRadius: 3,
+                    }}
+                  >
+                    Wznów pomiar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    size="large"
+                    startIcon={<AddTaskIcon sx={{ fontSize: '1.8rem !important' }} />}
+                    onClick={handleOpenSaveDialog}
+                    sx={{
+                      px: 4.5,
+                      py: 1.8,
+                      fontSize: '1.15rem',
+                      fontWeight: 800,
+                      borderRadius: 3,
+                    }}
+                  >
+                    Zapisz czas sesji
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="inherit"
+                    size="large"
+                    startIcon={<RestartAltIcon />}
+                    onClick={handleReset}
+                    sx={{
+                      px: 3.5,
+                      py: 1.8,
+                      fontSize: '1.05rem',
+                      borderRadius: 3,
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                    }}
+                  >
+                    Zresetuj
+                  </Button>
+                </>
+              )}
+            </Stack>
+          </Box>
+
+          {/* Fullscreen Bottom Footer */}
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={1.5}
+            sx={{ pt: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}
+          >
+            <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+              Łączny czas poświęcony na to zadanie:{' '}
+              <strong style={{ color: '#ffffff' }}>{formatHumanDuration(totalSeconds)}</strong>
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#64748b' }}>
+              Naciśnij <strong>Esc</strong> na klawiaturze lub kliknij przycisk, aby wyjść z pełnego ekranu
+            </Typography>
+          </Stack>
         </Dialog>
       </CardContent>
     </Card>

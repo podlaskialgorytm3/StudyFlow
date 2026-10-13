@@ -556,6 +556,9 @@ export default function TaskDetailPage() {
           <Grid item xs={12} md={6}>
             <TaskTimeTracker
               taskId={task.id}
+              taskTitle={task.title}
+              subjectName={task.subject?.name}
+              subjectColor={task.subject?.color || '#1976d2'}
               initialTimeSpentSeconds={task.timeSpentSeconds || 0}
               initialTimeEntries={task.timeEntries || []}
               onTimeUpdated={(newTotal) => {
