@@ -58,6 +58,7 @@ import {
   isTaskInTimeframe,
   TimeframePeriod,
 } from '@/lib/domain/timeframe';
+import { formatHumanDuration } from '@/lib/utils/formatTime';
 import { TaskStatus } from '@prisma/client';
 
 interface TaskPageSettings extends EisenhowerSettings {
@@ -508,6 +509,7 @@ export default function TasksPage() {
                   <TableCell sx={{ fontWeight: 700 }}>Zadanie</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Przedmiot</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Story Points</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Estymacja</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Ćwiartka Eisenhowera</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Termin</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
@@ -603,6 +605,16 @@ export default function TasksPage() {
                           size="small"
                           color={t.storyPoints >= settings.importantStoryPointsThreshold ? 'primary' : 'default'}
                           sx={{ fontWeight: 700 }}
+                        />
+                      </TableCell>
+
+                      {/* Estimated time */}
+                      <TableCell onClick={() => router.push(`/tasks/${t.id}`)}>
+                        <Chip
+                          label={formatHumanDuration((t.estimatedMinutes ?? 60) * 60)}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontWeight: 600, fontSize: '0.75rem' }}
                         />
                       </TableCell>
 

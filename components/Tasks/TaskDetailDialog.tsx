@@ -26,6 +26,7 @@ import SwapCallsIcon from '@mui/icons-material/SwapCalls';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Link from 'next/link';
 import { TaskItem } from './TaskFormDialog';
+import { formatHumanDuration } from '@/lib/utils/formatTime';
 import {
   classifyEisenhowerTask,
   EisenhowerSettings,
@@ -206,6 +207,12 @@ export default function TaskDetailDialog({
             <Chip
               label={`${task.storyPoints} Story Points`}
               color="primary"
+              variant="outlined"
+              sx={{ fontWeight: 700 }}
+            />
+            <Chip
+              label={`Szacowany czas: ${formatHumanDuration((task.estimatedMinutes ?? 60) * 60)}`}
+              color="info"
               variant="outlined"
               sx={{ fontWeight: 700 }}
             />

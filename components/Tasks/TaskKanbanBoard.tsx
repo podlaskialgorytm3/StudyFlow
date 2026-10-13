@@ -331,12 +331,20 @@ export default function TaskKanbanBoard({
                             </Typography>
                           </Stack>
 
-                          <Chip
-                            label={`${t.storyPoints} SP`}
-                            size="small"
-                            color={t.storyPoints >= settings.importantStoryPointsThreshold ? 'primary' : 'default'}
-                            sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }}
-                          />
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Chip
+                              label={`${t.storyPoints} SP`}
+                              size="small"
+                              color={t.storyPoints >= settings.importantStoryPointsThreshold ? 'primary' : 'default'}
+                              sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }}
+                            />
+                            <Chip
+                              label={formatHumanDuration((t.estimatedMinutes ?? 60) * 60)}
+                              size="small"
+                              variant="outlined"
+                              sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600 }}
+                            />
+                          </Stack>
                         </Stack>
 
                         {/* Title */}
