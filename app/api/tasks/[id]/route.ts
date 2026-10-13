@@ -124,6 +124,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         ...(data.description !== undefined ? { description: data.description } : {}),
         ...(data.subjectId !== undefined ? { subjectId: data.subjectId } : {}),
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
+        ...(data.startDate !== undefined ? { startDate: data.startDate ? new Date(data.startDate) : null } : {}),
         ...(data.dueDate !== undefined ? { dueDate: data.dueDate ? new Date(data.dueDate) : null } : {}),
         ...(data.storyPoints !== undefined ? { storyPoints: data.storyPoints } : {}),
         ...(nextStatus !== undefined ? { status: nextStatus, completedAt } : completedAt !== existing.completedAt ? { completedAt } : {}),

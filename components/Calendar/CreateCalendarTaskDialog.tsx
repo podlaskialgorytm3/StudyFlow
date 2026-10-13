@@ -21,7 +21,6 @@ import {
   FormControlLabel,
   Switch,
   CircularProgress,
-  InputAdornment,
 } from '@mui/material';
 import AddTaskIcon from '@mui/icons-material/AddTask';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -56,6 +55,7 @@ export default function CreateCalendarTaskDialog({
   const [title, setTitle] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [startDateTime, setStartDateTime] = useState('');
   const [dueDateTime, setDueDateTime] = useState('');
   const [estimatedMinutes, setEstimatedMinutes] = useState(60);
   const [storyPoints, setStoryPoints] = useState(3);
@@ -77,11 +77,15 @@ export default function CreateCalendarTaskDialog({
       setEstimatedMinutes(60);
       setSendToGoogle(googleConnected);
 
-      const targetDate = initialDate ? new Date(initialDate) : new Date(Date.now() + 3600 * 1000);
+      const startDate = initialDate ? new Date(initialDate) : new Date();
       if (!initialDate) {
-        targetDate.setMinutes(0, 0, 0);
+        startDate.setMinutes(0, 0, 0);
+        startDate.setHours(startDate.getHours() + 1);
       }
-      setDueDateTime(formatDateToInput(targetDate));
+      const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+
+      setStartDateTime(formatDateToInput(startDate));
+      setDueDateTime(formatDateToInput(endDate));
 
       // Fetch subjects
       setLoadingSubjects(true);
@@ -103,6 +107,40 @@ export default function CreateCalendarTaskDialog({
   const selectedSubject = subjects.find((s) => s.id === subjectId);
   const availableCategories = selectedSubject?.categories || [];
 
+  const handleStartDateChange = (val: string) => {
+    setStartDateTime(val);
+    if (val) {
+      const s = new Date(val);
+      if (!isNaN(s.getTime())) {
+        const newEnd = new Date(s.getTime() + estimatedMinutes * 60 * 1000);
+        setDueDateTime(formatDateToInput(newEnd));
+      }
+    }
+  };
+
+  const handleDueDateChange = (val: string) => {
+    setDueDateTime(val);
+    if (val && startDateTime) {
+      const s = new Date(startDateTime);
+      const e = new Date(val);
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e.getTime() > s.getTime()) {
+        const diffMins = Math.round((e.getTime() - s.getTime()) / 60000);
+        setEstimatedMinutes(diffMins);
+      }
+    }
+  };
+
+  const handleDurationSelect = (mins: number) => {
+    setEstimatedMinutes(mins);
+    if (startDateTime) {
+      const s = new Date(startDateTime);
+      if (!isNaN(s.getTime())) {
+        const newEnd = new Date(s.getTime() + mins * 60 * 1000);
+        setDueDateTime(formatDateToInput(newEnd));
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -118,7 +156,7 @@ export default function CreateCalendarTaskDialog({
     setError(null);
 
     try {
-      // 1. Create task in StudyFlow
+      // 1. Create task in StudyFlow with start and end times
       const taskRes = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -126,6 +164,7 @@ export default function CreateCalendarTaskDialog({
           title: title.trim(),
           subjectId,
           categoryId: categoryId || null,
+          startDate: startDateTime ? new Date(startDateTime).toISOString() : null,
           dueDate: dueDateTime ? new Date(dueDateTime).toISOString() : null,
           storyPoints,
           estimatedMinutes,
@@ -139,7 +178,7 @@ export default function CreateCalendarTaskDialog({
       }
 
       // 2. If sendToGoogle is checked, export to Google Calendar
-      if (sendToGoogle && dueDateTime && taskData.id) {
+      if (sendToGoogle && (startDateTime || dueDateTime) && taskData.id) {
         try {
           const gRes = await fetch(`/api/tasks/${taskData.id}/google-calendar`, {
             method: 'POST',
@@ -242,33 +281,45 @@ export default function CreateCalendarTaskDialog({
               )}
             </Stack>
 
-            {/* Date and Time */}
+            {/* Date and Time (Start & End) */}
             <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <AccessTimeIcon fontSize="small" color="primary" />
-                Termin i czas realizacji w kalendarzu
+                Data i godzina w kalendarzu
               </Typography>
 
-              <TextField
-                type="datetime-local"
-                label="Data i godzina terminu"
-                value={dueDateTime}
-                onChange={(e) => setDueDateTime(e.target.value)}
-                fullWidth
-                size="small"
-                InputLabelProps={{ shrink: true }}
-                sx={{ mb: 2 }}
-              />
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+                <TextField
+                  type="datetime-local"
+                  label="Data i godzina rozpoczęcia *"
+                  value={startDateTime}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  fullWidth
+                  size="small"
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+
+                <TextField
+                  type="datetime-local"
+                  label="Data i godzina zakończenia (termin)"
+                  value={dueDateTime}
+                  onChange={(e) => handleDueDateChange(e.target.value)}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Stack>
 
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
-                Przewidywany czas trwania (długość bloku w kalendarzu):
+                Szybki wybór czasu trwania ({estimatedMinutes} min):
               </Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {[30, 45, 60, 90, 120, 180].map((mins) => (
+                {[15, 30, 45, 60, 90, 120, 180].map((mins) => (
                   <Chip
                     key={mins}
                     label={mins >= 60 ? `${mins / 60} godz.` : `${mins} min`}
-                    onClick={() => setEstimatedMinutes(mins)}
+                    onClick={() => handleDurationSelect(mins)}
                     color={estimatedMinutes === mins ? 'primary' : 'default'}
                     variant={estimatedMinutes === mins ? 'filled' : 'outlined'}
                     clickable
@@ -368,4 +419,3 @@ export default function CreateCalendarTaskDialog({
     </Dialog>
   );
 }
-

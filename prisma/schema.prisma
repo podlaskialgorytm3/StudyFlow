@@ -159,6 +159,7 @@ model Task {
   category         Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   title            String
   description      String?
+  startDate        DateTime?
   dueDate          DateTime?
   storyPoints      Int               @default(1)
   status           TaskStatus        @default(NEW)

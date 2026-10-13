@@ -24,6 +24,8 @@ export interface UnifiedCalendarItem {
     storyPoints: number;
     estimatedMinutes: number;
     progressPercent: number;
+    startDate?: string | null;
+    dueDate?: string | null;
     googleEventId?: string | null;
     googleCalendarId?: string | null;
   };
@@ -128,11 +130,22 @@ export async function GET(req: Request) {
     const tasks = await prisma.task.findMany({
       where: {
         ownerId: session.userId,
-        dueDate: {
-          not: null,
-          gte: startDate,
-          lte: endDate,
-        },
+        OR: [
+          {
+            dueDate: {
+              not: null,
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          {
+            startDate: {
+              not: null,
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+        ],
       },
       include: {
         subject: {
@@ -147,12 +160,27 @@ export async function GET(req: Request) {
     });
 
     for (const t of tasks) {
-      if (!t.dueDate) continue;
+      if (!t.dueDate && !t.startDate) continue;
 
-      const due = new Date(t.dueDate);
-      // For tasks, default duration is estimatedMinutes or 60 min ending at dueDate
       const durationMs = (t.estimatedMinutes || 60) * 60 * 1000;
-      const start = new Date(due.getTime() - durationMs);
+      let start: Date;
+      let end: Date;
+
+      if (t.startDate && t.dueDate) {
+        start = new Date(t.startDate);
+        end = new Date(t.dueDate);
+        if (end.getTime() < start.getTime()) {
+          end = new Date(start.getTime() + durationMs);
+        }
+      } else if (t.startDate) {
+        start = new Date(t.startDate);
+        end = new Date(start.getTime() + durationMs);
+      } else if (t.dueDate) {
+        end = new Date(t.dueDate);
+        start = new Date(end.getTime() - durationMs);
+      } else {
+        continue;
+      }
 
       items.push({
         id: `task_${t.id}`,
@@ -161,7 +189,7 @@ export async function GET(req: Request) {
         description: t.description,
         location: null,
         start: start.toISOString(),
-        end: due.toISOString(),
+        end: end.toISOString(),
         isAllDay: false,
         color: t.subject?.color || '#1976d2',
         url: `/tasks/${t.id}`,
@@ -173,6 +201,8 @@ export async function GET(req: Request) {
           storyPoints: t.storyPoints,
           estimatedMinutes: t.estimatedMinutes,
           progressPercent: t.progressPercent,
+          startDate: t.startDate?.toISOString() || null,
+          dueDate: t.dueDate?.toISOString() || null,
           googleEventId: t.googleEventId,
           googleCalendarId: t.googleCalendarId,
         },

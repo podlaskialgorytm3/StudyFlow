@@ -46,9 +46,14 @@ export const taskSchema = z.object({
   categoryId: z.string().uuid('Nieprawidłowa kategoria').optional().nullable(),
   title: z.string().trim().min(1, 'Tytuł zadania jest wymagany').max(120, 'Tytuł może mieć maksymalnie 120 znaków'),
   description: z.string().trim().max(1000, 'Opis może mieć maksymalnie 1000 znaków').optional().nullable(),
+  startDate: z
+    .string()
+    .refine((val) => !val || !isNaN(Date.parse(val)), 'Niepoprawny format daty rozpoczęcia')
+    .optional()
+    .nullable(),
   dueDate: z
     .string()
-    .refine((val) => !val || !isNaN(Date.parse(val)), 'Niepoprawny format daty')
+    .refine((val) => !val || !isNaN(Date.parse(val)), 'Niepoprawny format daty terminu')
     .optional()
     .nullable(),
   storyPoints: z

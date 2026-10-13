@@ -35,11 +35,11 @@ export async function pushTaskToGoogleCalendar(
     };
   }
 
-  if (!task.dueDate) {
+  if (!task.dueDate && !task.startDate) {
     return {
       success: false,
       code: 'NO_DUE_DATE',
-      error: 'Zadanie musi mieć określony termin (datę i godzinę), aby mogło pojawić się w kalendarzu',
+      error: 'Zadanie musi mieć określoną datę rozpoczęcia lub termin (datę i godzinę), aby mogło pojawić się w kalendarzu',
     };
   }
 
@@ -86,9 +86,26 @@ export async function pushTaskToGoogleCalendar(
   }
 
   // Calculate start & end
-  const endDateTime = task.dueDate;
   const durationMs = (task.estimatedMinutes || 60) * 60 * 1000;
-  const startDateTime = new Date(endDateTime.getTime() - durationMs);
+  let startDateTime: Date;
+  let endDateTime: Date;
+
+  if (task.startDate && task.dueDate) {
+    startDateTime = task.startDate;
+    endDateTime = task.dueDate;
+    if (endDateTime.getTime() < startDateTime.getTime()) {
+      endDateTime = new Date(startDateTime.getTime() + durationMs);
+    }
+  } else if (task.startDate) {
+    startDateTime = task.startDate;
+    endDateTime = new Date(startDateTime.getTime() + durationMs);
+  } else if (task.dueDate) {
+    endDateTime = task.dueDate;
+    startDateTime = new Date(endDateTime.getTime() - durationMs);
+  } else {
+    startDateTime = new Date();
+    endDateTime = new Date(startDateTime.getTime() + durationMs);
+  }
 
   const eventRequestBody: calendar_v3.Schema$Event = {
     summary: `[StudyFlow] ${task.title}`,
