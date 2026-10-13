@@ -39,6 +39,8 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import TableRowsIcon from '@mui/icons-material/TableRows';
+import DateRangeIcon from '@mui/icons-material/DateRange';
+import Link from 'next/link';
 
 import AppNavbar from '@/components/Navigation/AppNavbar';
 import TaskFormDialog, { TaskItem, SubjectItem } from '@/components/Tasks/TaskFormDialog';
@@ -49,14 +51,24 @@ import {
   EisenhowerSettings,
   QUADRANT_CONFIG,
 } from '@/lib/domain/eisenhower';
+import {
+  generateTimeframePeriods,
+  isTaskInTimeframe,
+  TimeframePeriod,
+} from '@/lib/domain/timeframe';
 import { TaskStatus } from '@prisma/client';
+
+interface TaskPageSettings extends EisenhowerSettings {
+  taskHorizonDays: number;
+}
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
-  const [settings, setSettings] = useState<EisenhowerSettings>({
+  const [settings, setSettings] = useState<TaskPageSettings>({
     importantStoryPointsThreshold: 6,
     urgentWithinDays: 3,
+    taskHorizonDays: 7,
   });
   const [loading, setLoading] = useState(true);
 
@@ -65,6 +77,7 @@ export default function TasksPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [timeframeFilter, setTimeframeFilter] = useState<string>('current');
   const [sortBy, setSortBy] = useState<string>('dueDate'); // 'dueDate', 'storyPoints', 'createdAt'
 
   // View mode: 'kanban' or 'table'
@@ -97,6 +110,7 @@ export default function TasksPage() {
         setSettings({
           importantStoryPointsThreshold: setts.importantStoryPointsThreshold,
           urgentWithinDays: setts.urgentWithinDays,
+          taskHorizonDays: setts.taskHorizonDays ?? 7,
         });
       }
     } catch {
@@ -119,6 +133,31 @@ export default function TasksPage() {
     return subj?.categories || [];
   }, [selectedSubject, subjects]);
 
+  // Dynamic timeframe periods based on student's interval setting
+  const timeframePeriods = useMemo(() => {
+    return generateTimeframePeriods({
+      horizonDays: settings.taskHorizonDays || 7,
+      tasksDueDates: tasks.map((t) => t.dueDate),
+    });
+  }, [settings.taskHorizonDays, tasks]);
+
+  // Task count per timeframe period
+  const taskCountsByTimeframe = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const period of timeframePeriods) {
+      counts[period.key] = tasks.filter((t) => {
+        if (selectedSubject !== 'ALL' && t.subjectId !== selectedSubject) return false;
+        if (selectedCategory !== 'ALL' && t.categoryId !== selectedCategory) return false;
+        return isTaskInTimeframe(t.dueDate, period.key, settings.taskHorizonDays || 7, timeframePeriods);
+      }).length;
+    }
+    return counts;
+  }, [tasks, timeframePeriods, selectedSubject, selectedCategory, settings.taskHorizonDays]);
+
+  const activePeriod = useMemo(() => {
+    return timeframePeriods.find((p) => p.key === timeframeFilter) || timeframePeriods[0];
+  }, [timeframePeriods, timeframeFilter]);
+
   // Filtered & sorted tasks
   const filteredTasks = useMemo(() => {
     return tasks
@@ -126,6 +165,9 @@ export default function TasksPage() {
         if (selectedSubject !== 'ALL' && t.subjectId !== selectedSubject) return false;
         if (selectedCategory !== 'ALL' && t.categoryId !== selectedCategory) return false;
         if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+        if (!isTaskInTimeframe(t.dueDate, timeframeFilter, settings.taskHorizonDays || 7, timeframePeriods)) {
+          return false;
+        }
         if (search.trim()) {
           const q = search.toLowerCase();
           const matchTitle = t.title.toLowerCase().includes(q);
@@ -146,7 +188,7 @@ export default function TasksPage() {
         }
         return 0;
       });
-  }, [tasks, selectedSubject, selectedCategory, statusFilter, search, sortBy]);
+  }, [tasks, selectedSubject, selectedCategory, statusFilter, timeframeFilter, settings.taskHorizonDays, timeframePeriods, search, sortBy]);
 
   const handleToggleStatus = async (task: TaskItem) => {
     const nextStatus = task.status === TaskStatus.DONE ? TaskStatus.IN_PROGRESS : TaskStatus.DONE;
@@ -265,7 +307,7 @@ export default function TasksPage() {
         <Card sx={{ p: 2.5, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
             {/* Search */}
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
                 size="small"
@@ -283,7 +325,7 @@ export default function TasksPage() {
             </Grid>
 
             {/* Subject filter */}
-            <Grid item xs={12} sm={6} md={2.5}>
+            <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <InputLabel>Przedmiot</InputLabel>
                 <Select
@@ -305,7 +347,7 @@ export default function TasksPage() {
             </Grid>
 
             {/* Category filter */}
-            <Grid item xs={12} sm={6} md={2.5}>
+            <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <InputLabel>Kategoria</InputLabel>
                 <Select
@@ -323,8 +365,41 @@ export default function TasksPage() {
               </FormControl>
             </Grid>
 
+            {/* Timeframe / Horizon filter */}
+            <Grid item xs={12} sm={12} md={5}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Termin / Okres zadania</InputLabel>
+                <Select
+                  value={timeframeFilter}
+                  label="Termin / Okres zadania"
+                  onChange={(e) => setTimeframeFilter(e.target.value)}
+                >
+                  {timeframePeriods.map((period) => (
+                    <MenuItem key={period.key} value={period.key}>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{ width: '100%' }}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: period.key === 'current' ? 700 : 500 }}>
+                          {period.label}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={taskCountsByTimeframe[period.key] ?? 0}
+                          color={timeframeFilter === period.key ? 'primary' : 'default'}
+                          sx={{ ml: 1.5, height: 20, fontSize: '0.72rem', fontWeight: 700 }}
+                        />
+                      </Stack>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
             {/* Status filter */}
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid item xs={12} sm={6} md={3.5}>
               <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -342,7 +417,7 @@ export default function TasksPage() {
             </Grid>
 
             {/* Sort by */}
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid item xs={12} sm={6} md={3.5}>
               <FormControl fullWidth size="small">
                 <InputLabel>Sortuj według</InputLabel>
                 <Select value={sortBy} label="Sortuj według" onChange={(e) => setSortBy(e.target.value)}>
@@ -352,6 +427,39 @@ export default function TasksPage() {
               </FormControl>
             </Grid>
           </Grid>
+
+          {/* Active timeframe indicator bar */}
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1.5}
+            alignItems={{ sm: 'center' }}
+            justifyContent="space-between"
+            sx={{ mt: 2, pt: 1.5, borderTop: '1px solid #f1f5f9' }}
+          >
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              <DateRangeIcon fontSize="small" color="primary" />
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                Wybrany okres:
+              </Typography>
+              <Chip
+                size="small"
+                color="primary"
+                variant="filled"
+                label={activePeriod?.label || 'Bieżący okres'}
+                sx={{ fontWeight: 700, fontSize: '0.75rem' }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                (widoczne: {filteredTasks.length} {filteredTasks.length === 1 ? 'zadanie' : filteredTasks.length > 1 && filteredTasks.length < 5 ? 'zadania' : 'zadań'})
+              </Typography>
+            </Stack>
+
+            <Typography variant="caption" color="text.secondary">
+              Domyślny horyzont to <strong>{settings.taskHorizonDays} dni</strong>.{' '}
+              <Link href="/settings" style={{ color: '#1976d2', textDecoration: 'none', fontWeight: 600 }}>
+                Zmień w Ustawieniach
+              </Link>
+            </Typography>
+          </Stack>
         </Card>
 
         {/* Task List / Kanban / Table */}

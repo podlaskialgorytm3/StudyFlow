@@ -1,0 +1,176 @@
+import { getCalendarDaysRemaining } from './eisenhower';
+
+export interface TimeframePeriod {
+  key: string;
+  label: string;
+  shortLabel: string;
+  startDays: number | null;
+  endDays: number | null;
+  startDate?: Date;
+  endDate?: Date;
+  isSpecial?: 'all' | 'overdue' | 'no_date';
+}
+
+export interface GenerateTimeframeOptions {
+  horizonDays: number;
+  tasksDueDates?: (Date | string | null | undefined)[];
+  referenceDate?: Date;
+  minPeriods?: number;
+}
+
+/**
+ * Formats a Date object to Polish DD.MM.YYYY string format.
+ */
+export function formatDatePl(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+/**
+ * Adds full calendar days to a date.
+ */
+export function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+/**
+ * Generates timeframe periods based on the student's horizon interval (e.g. 7 days).
+ *
+ * Default period (key: 'current') covers from today to today + horizonDays (and past due tasks requiring completion).
+ * Subsequent periods (keys: 'period_1', 'period_2', ...) cover interval chunks:
+ * - Horizon 7 days: Week 2 (days 8-14), Week 3 (days 15-21), etc.
+ * - Horizon N days: Period 2 (days N+1 to 2N), Period 3 (days 2N+1 to 3N), etc.
+ */
+export function generateTimeframePeriods(options: GenerateTimeframeOptions): TimeframePeriod[] {
+  const horizonDays = Math.max(1, options.horizonDays || 7);
+  const ref = options.referenceDate ? new Date(options.referenceDate) : new Date();
+  const today = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+  const minPeriods = options.minPeriods ?? 4;
+
+  let maxDaysRemaining = 0;
+  if (options.tasksDueDates && options.tasksDueDates.length > 0) {
+    for (const d of options.tasksDueDates) {
+      const days = getCalendarDaysRemaining(d, today);
+      if (days !== null && days > maxDaysRemaining) {
+        maxDaysRemaining = days;
+      }
+    }
+  }
+
+  // Calculate how many periods are needed to cover future tasks
+  const periodsCount = Math.max(minPeriods, Math.ceil(maxDaysRemaining / horizonDays));
+
+  const periods: TimeframePeriod[] = [];
+
+  // 1. Current period (Default: from today to +horizonDays)
+  const currentEndDate = addDays(today, horizonDays);
+  const isSevenDays = horizonDays === 7;
+
+  periods.push({
+    key: 'current',
+    label: isSevenDays
+      ? `Bieżący tydzień: [${formatDatePl(today)} – ${formatDatePl(currentEndDate)}]`
+      : `Bieżący okres (${horizonDays} dni): [${formatDatePl(today)} – ${formatDatePl(currentEndDate)}]`,
+    shortLabel: isSevenDays ? 'Bieżący tydzień' : `Bieżące ${horizonDays} dni`,
+    startDays: null, // covers tasks up to horizonDays (including overdue)
+    endDays: horizonDays,
+    startDate: today,
+    endDate: currentEndDate,
+  });
+
+  // 2. Future periods: period_1 (e.g. days 8 to 14), period_2 (days 15 to 21), etc.
+  for (let k = 1; k < periodsCount; k++) {
+    const startDay = k * horizonDays + 1;
+    const endDay = (k + 1) * horizonDays;
+    const periodStartDate = addDays(today, startDay);
+    const periodEndDate = addDays(today, endDay);
+    const periodNumber = k + 1;
+
+    periods.push({
+      key: `period_${k}`,
+      label: isSevenDays
+        ? `Tydzień ${periodNumber}: [${formatDatePl(periodStartDate)} – ${formatDatePl(periodEndDate)}]`
+        : `Okres ${periodNumber} (${horizonDays} dni): [${formatDatePl(periodStartDate)} – ${formatDatePl(periodEndDate)}]`,
+      shortLabel: isSevenDays ? `Tydzień ${periodNumber}` : `Okres ${periodNumber}`,
+      startDays: startDay,
+      endDays: endDay,
+      startDate: periodStartDate,
+      endDate: periodEndDate,
+    });
+  }
+
+  // 3. Special filters
+  periods.push({
+    key: 'all',
+    label: 'Wszystkie terminy (brak filtra czasu)',
+    shortLabel: 'Wszystkie',
+    startDays: null,
+    endDays: null,
+    isSpecial: 'all',
+  });
+
+  periods.push({
+    key: 'overdue',
+    label: 'Tylko zaległe (po terminie)',
+    shortLabel: 'Zaległe',
+    startDays: null,
+    endDays: null,
+    isSpecial: 'overdue',
+  });
+
+  periods.push({
+    key: 'no_date',
+    label: 'Bez ustalonego terminu',
+    shortLabel: 'Bez terminu',
+    startDays: null,
+    endDays: null,
+    isSpecial: 'no_date',
+  });
+
+  return periods;
+}
+
+/**
+ * Checks whether a task falls within the selected timeframe period.
+ */
+export function isTaskInTimeframe(
+  dueDate: Date | string | null | undefined,
+  selectedPeriodKey: string,
+  horizonDays: number,
+  periods: TimeframePeriod[],
+  referenceDate: Date = new Date()
+): boolean {
+  if (selectedPeriodKey === 'all') {
+    return true;
+  }
+
+  if (selectedPeriodKey === 'no_date') {
+    return dueDate === null || dueDate === undefined;
+  }
+
+  const daysRemaining = getCalendarDaysRemaining(dueDate, referenceDate);
+
+  if (selectedPeriodKey === 'overdue') {
+    return daysRemaining !== null && daysRemaining < 0;
+  }
+
+  if (daysRemaining === null) {
+    return false;
+  }
+
+  if (selectedPeriodKey === 'current') {
+    // Default view: tasks due within horizonDays (including overdue tasks)
+    return daysRemaining <= horizonDays;
+  }
+
+  const period = periods.find((p) => p.key === selectedPeriodKey);
+  if (!period || period.startDays === null || period.endDays === null) {
+    return true;
+  }
+
+  return daysRemaining >= period.startDays && daysRemaining <= period.endDays;
+}

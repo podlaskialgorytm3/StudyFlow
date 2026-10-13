@@ -19,6 +19,7 @@ import {
 import SaveIcon from '@mui/icons-material/Save';
 import TuneIcon from '@mui/icons-material/Tune';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import DateRangeIcon from '@mui/icons-material/DateRange';
 import AppNavbar from '@/components/Navigation/AppNavbar';
 
 export default function SettingsPage() {
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   const [role, setRole] = useState('');
   const [importantThreshold, setImportantThreshold] = useState<number>(6);
   const [urgentDays, setUrgentDays] = useState<number>(3);
+  const [taskHorizonDays, setTaskHorizonDays] = useState<number>(7);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -50,6 +52,9 @@ export default function SettingsPage() {
           const s = await settingsRes.json();
           setImportantThreshold(s.importantStoryPointsThreshold);
           setUrgentDays(s.urgentWithinDays);
+          if (s.taskHorizonDays !== undefined && s.taskHorizonDays !== null) {
+            setTaskHorizonDays(s.taskHorizonDays);
+          }
         }
       } catch {
         setError('Błąd wczytywania ustawień');
@@ -74,6 +79,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           importantStoryPointsThreshold: importantThreshold,
           urgentWithinDays: urgentDays,
+          taskHorizonDays: taskHorizonDays,
         }),
       });
 
@@ -110,12 +116,12 @@ export default function SettingsPage() {
           Ustawienia aplikacji
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-          Dostosuj progi automatycznej klasyfikacji w macierzy Eisenhowera oraz zarządzaj swoim kontem.
+          Dostosuj horyzonty czasowe listy zadań, progi automatycznej klasyfikacji w macierzy Eisenhowera oraz zarządzaj swoim kontem.
         </Typography>
 
         {success && (
           <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(false)}>
-            Ustawienia zostały pomyślnie zaktualizowane. Macierz Eisenhowera została przeliczona według nowych progów!
+            Ustawienia zostały pomyślnie zaktualizowane. Macierz Eisenhowera oraz domyślne interwały na Liście Zadań zostały zapisane!
           </Alert>
         )}
 
@@ -224,6 +230,81 @@ export default function SettingsPage() {
                     fullWidth
                     sx={{ maxWidth: 220 }}
                   />
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Task Horizon & Interval Card */}
+            <Card>
+              <CardContent>
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+                  <DateRangeIcon color="primary" />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Horyzont czasowy i interwały (Lista Zadań)
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Dostosuj domyślny okres wyświetlania zadań oraz długość przedziałów (np. tygodnie lub dowolne interwały co określoną liczbę dni) w filtrze na Liście Zadań.
+                </Typography>
+                <Divider sx={{ mb: 3 }} />
+
+                <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      Domyślny interwał / horyzont zadań
+                    </Typography>
+                    <Typography variant="h5" color="primary" sx={{ fontWeight: 800 }}>
+                      {taskHorizonDays} {taskHorizonDays === 1 ? 'dzień' : 'dni'}
+                      {taskHorizonDays === 7 ? ' (1 tydzień)' : taskHorizonDays === 14 ? ' (2 tygodnie)' : ''}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Zadania z terminem zakończenia w ciągu <strong>{taskHorizonDays} dni w przód</strong> są wyświetlane domyślnie. Zadania przypadające na dalsze dni ({taskHorizonDays + 1} dni i więcej) możesz przeglądać wybierając odpowiedni okres w selektorze na Liście Zadań (np. Tydzień 2: [od do] dnia).
+                  </Typography>
+
+                  <Slider
+                    value={taskHorizonDays}
+                    onChange={(_, val) => setTaskHorizonDays(val as number)}
+                    min={1}
+                    max={30}
+                    step={1}
+                    marks={[
+                      { value: 1, label: '1d' },
+                      { value: 3, label: '3d' },
+                      { value: 7, label: '7d (tydzień)' },
+                      { value: 14, label: '14d (2 tyg.)' },
+                      { value: 21, label: '21d' },
+                      { value: 30, label: '30d (miesiąc)' },
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mb: 3, mt: 1 }}
+                  />
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+                    <TextField
+                      type="number"
+                      label="Własna liczba dni interwału"
+                      value={taskHorizonDays}
+                      onChange={(e) => setTaskHorizonDays(Math.max(1, Math.min(90, parseInt(e.target.value) || 1)))}
+                      inputProps={{ min: 1, max: 90 }}
+                      fullWidth
+                      sx={{ maxWidth: 220 }}
+                      helperText="Dozwolony zakres: od 1 do 90 dni"
+                    />
+
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      {[3, 7, 14, 21, 30].map((d) => (
+                        <Chip
+                          key={d}
+                          label={d === 7 ? '7 dni (tydzień)' : d === 14 ? '14 dni (2 tygodnie)' : `${d} dni`}
+                          onClick={() => setTaskHorizonDays(d)}
+                          color={taskHorizonDays === d ? 'primary' : 'default'}
+                          variant={taskHorizonDays === d ? 'filled' : 'outlined'}
+                          clickable
+                        />
+                      ))}
+                    </Stack>
+                  </Stack>
                 </Box>
               </CardContent>
             </Card>
