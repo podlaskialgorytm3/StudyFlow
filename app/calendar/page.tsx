@@ -51,6 +51,13 @@ interface CalendarMeta {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i); // 00:00 to 23:00
 
+function formatDayKey(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
@@ -180,7 +187,7 @@ export default function CalendarPage() {
     const map = new Map<string, { allDay: UnifiedCalendarItem[]; timed: UnifiedCalendarItem[] }>();
 
     for (const day of viewDays) {
-      const dayKey = day.toISOString().slice(0, 10);
+      const dayKey = formatDayKey(day);
       map.set(dayKey, { allDay: [], timed: [] });
     }
 
@@ -189,14 +196,24 @@ export default function CalendarPage() {
       const evEnd = new Date(ev.end);
 
       for (const day of viewDays) {
+        const dayKey = formatDayKey(day);
         const dayStart = new Date(day);
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(day);
         dayEnd.setHours(23, 59, 59, 999);
 
-        // Check intersection
-        if (evStart <= dayEnd && evEnd >= dayStart) {
-          const dayKey = day.toISOString().slice(0, 10);
+        let matches = false;
+        if (ev.isAllDay) {
+          if (ev.start.startsWith(dayKey) || (evStart <= dayEnd && evEnd >= dayStart)) {
+            matches = true;
+          }
+        } else {
+          if (evStart <= dayEnd && evEnd >= dayStart) {
+            matches = true;
+          }
+        }
+
+        if (matches) {
           const entry = map.get(dayKey);
           if (entry) {
             if (ev.isAllDay) {
@@ -231,7 +248,7 @@ export default function CalendarPage() {
     return `${startStr} – ${endStr}`;
   }, [viewMode, currentDate, viewDays]);
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = formatDayKey(new Date());
   const currentHourNow = new Date().getHours() + new Date().getMinutes() / 60;
 
   return (
@@ -399,7 +416,7 @@ export default function CalendarPage() {
             >
               <Box sx={{ p: 1, borderRight: '1px solid #e2e8f0' }} />
               {viewDays.map((d) => {
-                const dayKey = d.toISOString().slice(0, 10);
+                const dayKey = formatDayKey(d);
                 const isToday = dayKey === todayIso;
 
                 return (
@@ -461,7 +478,7 @@ export default function CalendarPage() {
               </Box>
 
               {viewDays.map((d) => {
-                const dayKey = d.toISOString().slice(0, 10);
+                const dayKey = formatDayKey(d);
                 const allDayItems = eventsByDay.get(dayKey)?.allDay || [];
 
                 return (
@@ -528,7 +545,7 @@ export default function CalendarPage() {
 
               {/* Day Columns */}
               {viewDays.map((d) => {
-                const dayKey = d.toISOString().slice(0, 10);
+                const dayKey = formatDayKey(d);
                 const isToday = dayKey === todayIso;
                 const timedItems = eventsByDay.get(dayKey)?.timed || [];
 
