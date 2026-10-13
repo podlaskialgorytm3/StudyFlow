@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
 import { taskTimeEntrySchema } from '@/lib/validation/schemas';
+import { TaskStatus } from '@prisma/client';
 
 interface RouteParams {
   params: { id: string };
