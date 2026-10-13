@@ -490,7 +490,7 @@ export default function TasksPage() {
           <TaskKanbanBoard
             tasks={filteredTasks}
             settings={settings}
-            onSelectTask={(t) => setDetailTask(t)}
+            onSelectTask={(t) => router.push(`/tasks/${t.id}`)}
             onEditTask={(t) => {
               setEditingTask(t);
               setFormOpen(true);
@@ -540,7 +540,7 @@ export default function TasksPage() {
                       </TableCell>
 
                       {/* Title & Description */}
-                      <TableCell onClick={() => setDetailTask(t)}>
+                      <TableCell onClick={() => router.push(`/tasks/${t.id}`)}>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Typography
                             variant="body2"
@@ -575,7 +575,7 @@ export default function TasksPage() {
                       </TableCell>
 
                       {/* Subject & Category */}
-                      <TableCell onClick={() => setDetailTask(t)}>
+                      <TableCell onClick={() => router.push(`/tasks/${t.id}`)}>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Box
                             sx={{
@@ -597,7 +597,7 @@ export default function TasksPage() {
                       </TableCell>
 
                       {/* Story Points */}
-                      <TableCell onClick={() => setDetailTask(t)}>
+                      <TableCell onClick={() => router.push(`/tasks/${t.id}`)}>
                         <Chip
                           label={`${t.storyPoints} SP`}
                           size="small"
@@ -607,7 +607,7 @@ export default function TasksPage() {
                       </TableCell>
 
                       {/* Eisenhower Quadrant */}
-                      <TableCell onClick={() => setDetailTask(t)}>
+                      <TableCell onClick={() => router.push(`/tasks/${t.id}`)}>
                         <Chip
                           label={`${qConf.code}: ${qConf.label}`}
                           size="small"
@@ -621,7 +621,7 @@ export default function TasksPage() {
                       </TableCell>
 
                       {/* Due date */}
-                      <TableCell onClick={() => setDetailTask(t)}>
+                      <TableCell onClick={() => router.push(`/tasks/${t.id}`)}>
                         {t.dueDate ? (
                           <Stack direction="row" spacing={1} alignItems="center">
                             <AccessTimeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -657,7 +657,7 @@ export default function TasksPage() {
                       </TableCell>
 
                       {/* Status */}
-                      <TableCell onClick={() => setDetailTask(t)}>
+                      <TableCell onClick={() => router.push(`/tasks/${t.id}`)}>
                         <Chip
                           label={t.status}
                           size="small"
@@ -670,6 +670,14 @@ export default function TasksPage() {
                       {/* Actions */}
                       <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          <IconButton
+                            size="small"
+                            color="info"
+                            onClick={() => router.push(`/tasks/${t.id}`)}
+                            title="Otwórz pełną stronę zadania i stoper"
+                          >
+                            <OpenInNewIcon fontSize="small" />
+                          </IconButton>
                           <IconButton
                             size="small"
                             color="primary"

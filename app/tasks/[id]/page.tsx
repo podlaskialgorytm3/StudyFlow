@@ -511,7 +511,7 @@ export default function TaskDetailPage() {
                           Utworzono
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {new Date(task.createdAt).toLocaleString('pl-PL')}
+                          {task.createdAt ? new Date(task.createdAt).toLocaleString('pl-PL') : '—'}
                         </Typography>
                       </Box>
                       {task.completedAt && (

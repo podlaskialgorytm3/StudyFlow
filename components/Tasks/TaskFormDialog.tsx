@@ -43,6 +43,8 @@ export interface TaskItem {
   priorityOverride?: PriorityOverride | null;
   urgencyOverride?: UrgencyOverride | null;
   completedAt?: string | null;
+  createdAt?: string | null;
+  timeSpentSeconds?: number;
   subject?: { id: string; name: string; color?: string | null };
   category?: { id: string; name: string } | null;
 }
