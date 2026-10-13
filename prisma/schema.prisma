@@ -37,25 +37,80 @@ model User {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  settings     UserSettings?
-  subjects     Subject[]
-  categories   Category[]
-  tasks        Task[]
+  settings              UserSettings?
+  subjects              Subject[]
+  categories            Category[]
+  tasks                 Task[]
+  googleCalendarAccount GoogleCalendarAccount?
+  googleCalendarEvents  GoogleCalendarEvent[]
 
   @@map("users")
 }
 
 model UserSettings {
-  id                           String   @id @default(uuid())
-  userId                       String   @unique
-  user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                            String   @id @default(uuid())
+  userId                        String   @unique
+  user                          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   importantStoryPointsThreshold Int      @default(6)
-  urgentWithinDays             Int      @default(3)
-  taskHorizonDays              Int      @default(7)
-  createdAt                    DateTime @default(now())
-  updatedAt                    DateTime @updatedAt
+  urgentWithinDays              Int      @default(3)
+  taskHorizonDays               Int      @default(7)
+  calendarShowGoogleEvents      Boolean  @default(true)
+  calendarShowStudyFlowTasks    Boolean  @default(true)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
 
   @@map("user_settings")
+}
+
+model GoogleCalendarAccount {
+  id                   String    @id @default(uuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEmail          String?
+  encryptedAccessToken String
+  encryptedRefreshToken String?
+  tokenExpiresAt       DateTime?
+  scope                String?
+  selectedCalendarId   String    @default("primary")
+  selectedCalendarName String?
+  syncFrequencyHours   Int       @default(3) // 1, 3, or 6
+  nextSyncAt           DateTime?
+  lastSyncAt           DateTime?
+  lastSyncStatus       String?   // "SUCCESS", "ERROR", "IN_PROGRESS"
+  lastSyncError        String?
+  syncToken            String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("google_calendar_accounts")
+}
+
+model GoogleCalendarEvent {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEventId String
+  calendarId   String   @default("primary")
+  summary      String
+  description  String?
+  location     String?
+  startDateTime DateTime?
+  endDateTime   DateTime?
+  isAllDay     Boolean  @default(false)
+  allDayDate   String?  // YYYY-MM-DD
+  status       String   @default("confirmed") // "confirmed", "tentative", "cancelled"
+  htmlLink     String?
+  colorId      String?
+  recurringEventId String?
+  etag         String?
+  updatedInGoogle DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, googleEventId])
+  @@index([userId, startDateTime])
+  @@index([userId, isAllDay, allDayDate])
+  @@map("google_calendar_events")
 }
 
 model Subject {
