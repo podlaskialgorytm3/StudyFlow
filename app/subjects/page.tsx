@@ -44,7 +44,7 @@ interface SubjectWithCounts {
   };
 }
 
-export const COLOR_PALETTE = [
+const COLOR_PALETTE = [
   // Niebieskie & Cyjan
   { hex: '#2563eb', label: 'Klasyczny błękit' },
   { hex: '#0284c7', label: 'Morski' },
@@ -114,7 +114,7 @@ export default function SubjectsPage() {
   const handleOpenCreate = () => {
     setEditingSubject(null);
     setName('');
-    setColor(COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)]);
+    setColor(COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)].hex);
     setDescription('');
     setFormError(null);
     setDialogOpen(true);
