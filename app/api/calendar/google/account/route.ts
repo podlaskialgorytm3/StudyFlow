@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
-import { disconnectGoogleCalendar, getAuthenticatedCalendarClient } from '@/lib/google/calendarClient';
+import { disconnectGoogleCalendar, getAuthenticatedCalendarClient, getGoogleOAuthCredentials, getGoogleRedirectUri } from '@/lib/google/calendarClient';
 import { z } from 'zod';
 
 const updateGoogleAccountSchema = z.object({
@@ -37,12 +37,17 @@ export async function GET() {
     },
   });
 
-  const isConfigured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  const credentials = await getGoogleOAuthCredentials(session.userId);
+  const isConfigured = Boolean(credentials);
+  const hasCustomCredentials = Boolean(credentials?.isCustom);
+  const redirectUri = getGoogleRedirectUri();
 
   if (!account) {
     return NextResponse.json({
       connected: false,
       isConfigured,
+      hasCustomCredentials,
+      redirectUri,
       account: null,
       calendars: [],
     });
@@ -67,6 +72,8 @@ export async function GET() {
   return NextResponse.json({
     connected: true,
     isConfigured,
+    hasCustomCredentials,
+    redirectUri,
     account,
     calendars,
   });
