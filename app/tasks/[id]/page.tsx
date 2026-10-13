@@ -286,16 +286,24 @@ export default function TaskDetailPage() {
         </Stack>
 
         {/* Task Title Header Card */}
-        <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
+        <Card sx={{ mb: 3.5, borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               justifyContent="space-between"
               alignItems={{ md: 'center' }}
-              spacing={2}
+              spacing={2.5}
             >
               <Box>
-                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" sx={{ mb: 1 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    mb: 2,
+                  }}
+                >
                   <Chip
                     icon={<SchoolIcon sx={{ fontSize: '1rem !important' }} />}
                     label={task.subject?.name || 'Przedmiot'}
@@ -338,7 +346,7 @@ export default function TaskDetailPage() {
                     variant={isDone ? 'filled' : 'outlined'}
                     sx={{ fontWeight: 700 }}
                   />
-                </Stack>
+                </Box>
 
                 <Typography
                   variant="h4"
@@ -347,6 +355,7 @@ export default function TaskDetailPage() {
                     fontWeight: 800,
                     textDecoration: isDone ? 'line-through' : 'none',
                     color: isDone ? 'text.secondary' : 'text.primary',
+                    lineHeight: 1.25,
                   }}
                 >
                   {task.title}
