@@ -14,18 +14,21 @@ import {
   CircularProgress,
   Fab,
   Tooltip,
+  Paper,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SchoolIcon from '@mui/icons-material/School';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import EventIcon from '@mui/icons-material/Event';
+import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import Link from 'next/link';
 
 import AppNavbar from '@/components/Navigation/AppNavbar';
 import EisenhowerMatrix from '@/components/Eisenhower/EisenhowerMatrix';
 import TaskFormDialog, { TaskItem, SubjectItem } from '@/components/Tasks/TaskFormDialog';
 import TaskDetailDialog from '@/components/Tasks/TaskDetailDialog';
+import FocusModeView from '@/components/Focus/FocusModeView';
 import { EisenhowerSettings } from '@/lib/domain/eisenhower';
 import { TaskStatus } from '@prisma/client';
 
@@ -37,6 +40,9 @@ export default function DashboardPage() {
     urgentWithinDays: 3,
   });
   const [loading, setLoading] = useState(true);
+
+  // Focus Mode state
+  const [focusMode, setFocusMode] = useState(false);
 
   // Dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -141,7 +147,20 @@ export default function DashboardPage() {
             </Typography>
           </Box>
 
-          <Stack direction="row" spacing={1.5}>
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+            <Button
+              variant="contained"
+              startIcon={<CenterFocusStrongIcon />}
+              onClick={() => setFocusMode(true)}
+              sx={{
+                bgcolor: '#4f46e5',
+                '&:hover': { bgcolor: '#4338ca' },
+                fontWeight: 700,
+                px: 2,
+              }}
+            >
+              Tryb skupienia
+            </Button>
             <Button
               component={Link}
               href="/subjects"
@@ -162,6 +181,69 @@ export default function DashboardPage() {
             </Button>
           </Stack>
         </Stack>
+
+        {/* Focus Mode Banner */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.5,
+            mb: 3,
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            gap: 2,
+            boxShadow: '0 8px 24px rgba(79, 70, 229, 0.18)',
+          }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: 2.5,
+                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <CenterFocusStrongIcon sx={{ fontSize: 26, color: '#ffffff' }} />
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                Tryb skupienia (Focus Mode)
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.25 }}>
+                Ogranicz rozpraszacze i skup się na maksymalnie 3 najważniejszych zadaniach rekomendowanych na dzisiaj.
+              </Typography>
+            </Box>
+          </Stack>
+
+          <Button
+            variant="contained"
+            onClick={() => setFocusMode(true)}
+            startIcon={<CenterFocusStrongIcon />}
+            sx={{
+              bgcolor: '#ffffff',
+              color: '#4f46e5',
+              fontWeight: 800,
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              whiteSpace: 'nowrap',
+              '&:hover': {
+                bgcolor: '#f8fafc',
+              },
+            }}
+          >
+            Włącz skupienie
+          </Button>
+        </Paper>
 
         {/* 4 Summary Stats Cards */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -374,6 +456,17 @@ export default function DashboardPage() {
           <AddIcon />
         </Fab>
       </Tooltip>
+
+      {/* Focus Mode Overlay */}
+      {focusMode && (
+        <FocusModeView
+          tasks={tasks}
+          settings={settings}
+          onClose={() => setFocusMode(false)}
+          onOpenTaskDetail={(task) => setDetailTask(task)}
+          onRefreshData={fetchData}
+        />
+      )}
 
       {/* Dialogs */}
       <TaskFormDialog

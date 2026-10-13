@@ -102,3 +102,4 @@ describe('Focus Mode Top 3 Selection Algorithm', () => {
     expect(selectFocusTopTasks([], settings, [], refDate)).toEqual([]);
   });
 });
+
