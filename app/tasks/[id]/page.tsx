@@ -36,6 +36,7 @@ import { useParams, useRouter } from 'next/navigation';
 import AppNavbar from '@/components/Navigation/AppNavbar';
 import TaskFormDialog, { TaskItem, SubjectItem } from '@/components/Tasks/TaskFormDialog';
 import TaskTimeTracker, { TaskTimeEntryItem } from '@/components/Tasks/TaskTimeTracker';
+import { formatHumanDuration } from '@/lib/utils/formatTime';
 import {
   classifyEisenhowerTask,
   EisenhowerSettings,
@@ -319,6 +320,13 @@ export default function TaskDetailPage() {
                     sx={{ fontWeight: 700 }}
                   />
                   <Chip
+                    icon={<AccessTimeIcon sx={{ fontSize: '1rem !important' }} />}
+                    label={`Szacowany czas: ${formatHumanDuration((task.estimatedMinutes ?? 60) * 60)}`}
+                    color="info"
+                    variant="outlined"
+                    sx={{ fontWeight: 700 }}
+                  />
+                  <Chip
                     label={`Status: ${task.status}`}
                     color={isDone ? 'success' : 'default'}
                     variant={isDone ? 'filled' : 'outlined'}
@@ -505,7 +513,23 @@ export default function TaskDetailPage() {
                       </Stack>
                     </Box>
 
-                    <Stack direction="row" spacing={3}>
+                    <Stack direction="row" spacing={3} flexWrap="wrap">
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Szacowany czas (Estymacja)
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: 'info.main' }}>
+                          {formatHumanDuration((task.estimatedMinutes ?? 60) * 60)}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Rzeczywisty czas (Poświęcony)
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: task.timeSpentSeconds > (task.estimatedMinutes ?? 60) * 60 ? 'warning.main' : 'success.main' }}>
+                          {formatHumanDuration(task.timeSpentSeconds || 0)}
+                        </Typography>
+                      </Box>
                       <Box>
                         <Typography variant="caption" color="text.secondary">
                           Utworzono

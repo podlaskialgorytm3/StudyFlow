@@ -497,6 +497,7 @@ export default function SubjectDetailsPage() {
                           <TableCell sx={{ fontWeight: 700 }}>Zadanie</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Kategoria</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Story Points</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Estymacja</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Poświęcony czas</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Termin</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
@@ -539,6 +540,14 @@ export default function SubjectDetailsPage() {
                               </TableCell>
                               <TableCell>
                                 <Chip label={`${t.storyPoints} SP`} size="small" sx={{ fontWeight: 700 }} />
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={formatHumanDuration((t.estimatedMinutes ?? 60) * 60)}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600 }}
+                                />
                               </TableCell>
                               <TableCell>
                                 {t.timeSpentSeconds && t.timeSpentSeconds > 0 ? (

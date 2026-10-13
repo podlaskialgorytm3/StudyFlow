@@ -25,6 +25,7 @@ import {
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { formatHumanDuration } from '@/lib/utils/formatTime';
 import { TaskItem, SubjectItem } from '@/components/Tasks/TaskFormDialog';
 import {
   classifyEisenhowerTask,
@@ -141,6 +142,12 @@ export default function EisenhowerMatrix({
               label={`${task.storyPoints} SP`}
               size="small"
               sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+            />
+            <Chip
+              label={formatHumanDuration((task.estimatedMinutes ?? 60) * 60)}
+              size="small"
+              variant="outlined"
+              sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600 }}
             />
           </Stack>
         </Stack>
