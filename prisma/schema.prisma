@@ -43,6 +43,7 @@ model User {
   tasks                 Task[]
   googleCalendarAccount GoogleCalendarAccount?
   googleCalendarEvents  GoogleCalendarEvent[]
+  weeklyReports         WeeklyReport[]
 
   @@map("users")
 }
@@ -188,5 +189,31 @@ model TaskTimeEntry {
   createdAt       DateTime @default(now())
 
   @@map("task_time_entries")
+}
+
+enum ReportStatus {
+  GENERATING
+  READY
+  FAILED
+}
+
+model WeeklyReport {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart   DateTime
+  weekEnd     DateTime
+  generatedAt DateTime     @default(now())
+  status      ReportStatus @default(READY)
+  pdfPath     String?
+  pdfData     Bytes?
+  summaryJson String?
+  error       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([userId, weekStart, weekEnd])
+  @@index([userId, weekStart])
+  @@map("weekly_reports")
 }
 
