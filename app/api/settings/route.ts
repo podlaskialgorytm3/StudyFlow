@@ -19,6 +19,7 @@ export async function GET() {
         userId: session.userId,
         importantStoryPointsThreshold: 6,
         urgentWithinDays: 3,
+        taskHorizonDays: 7,
       },
     });
   }
@@ -43,18 +44,20 @@ export async function PATCH(req: Request) {
       );
     }
 
-    const { importantStoryPointsThreshold, urgentWithinDays } = parsed.data;
+    const { importantStoryPointsThreshold, urgentWithinDays, taskHorizonDays } = parsed.data;
 
     const settings = await prisma.userSettings.upsert({
       where: { userId: session.userId },
       update: {
         importantStoryPointsThreshold,
         urgentWithinDays,
+        taskHorizonDays,
       },
       create: {
         userId: session.userId,
         importantStoryPointsThreshold,
         urgentWithinDays,
+        taskHorizonDays: taskHorizonDays ?? 7,
       },
     });
 
