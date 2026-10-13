@@ -140,6 +140,7 @@ Aplikacja udostępnia interaktywny kalendarz akademicki łączący wydarzenia z 
   - Wybór docelowego kalendarza Google z listy kalendarzy użytkownika.
   - Wybór częstotliwości synchronizacji (1, 3 lub 6 godzin).
   - Przełączniki widoczności wydarzeń Google i zadań StudyFlow zapisywane trwale w profilu studenta.
+  - **Bezpośrednie wprowadzanie poświadczeń w interfejsie (`Client ID` i `Client Secret`):** użytkownik może wprowadzić dane aplikacji Google bezpośrednio w formularzu w `/settings` bez modyfikacji plików `.env` na serwerze; dane te są szyfrowane algorytmem **AES-256-GCM** i bezpiecznie przechowywane w bazie danych PostgreSQL.
 
 ---
 
@@ -156,7 +157,7 @@ Aplikacja udostępnia interaktywny kalendarz akademicki łączący wydarzenia z 
 | **ORM** | Prisma ORM |
 | **Walidacja danych** | Zod |
 | **Autoryzacja & Sesje** | JWT (`jose`), ciasteczka `HttpOnly`, `bcryptjs` |
-| **Testy jednostkowe** | Vitest (55 testów obejmujących szyfrowanie, OAuth, synchronizację, domenę i dostęp) |
+| **Testy jednostkowe** | Vitest (56 testów obejmujących szyfrowanie, OAuth, bazodanowe klucze, synchronizację, domenę i dostęp) |
 
 ---
 

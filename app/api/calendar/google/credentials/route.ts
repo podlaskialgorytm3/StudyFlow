@@ -117,3 +117,4 @@ export async function DELETE() {
     return NextResponse.json({ error: 'Błąd podczas usuwania poświadczeń' }, { status: 500 });
   }
 }
+
