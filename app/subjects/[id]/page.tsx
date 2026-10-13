@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Box,
@@ -35,12 +35,17 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import CategoryIcon from '@mui/icons-material/Category';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import TimelapseIcon from '@mui/icons-material/Timelapse';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 import AppNavbar from '@/components/Navigation/AppNavbar';
 import TaskFormDialog, { TaskItem, SubjectItem } from '@/components/Tasks/TaskFormDialog';
 import TaskDetailDialog from '@/components/Tasks/TaskDetailDialog';
+import { formatHumanDuration } from '@/lib/utils/formatTime';
 import { TaskStatus } from '@prisma/client';
 
 interface CategoryItem {
@@ -100,6 +105,45 @@ export default function SubjectDetailsPage() {
   useEffect(() => {
     if (id) fetchSubject();
   }, [id, fetchSubject]);
+
+  // Statistics for time spent on this subject
+  const timeStats = useMemo(() => {
+    if (!subject) {
+      return {
+        totalSeconds: 0,
+        tasksWithTimeCount: 0,
+        avgSecondsPerTrackedTask: 0,
+        timeByCategory: {} as Record<string, number>,
+        uncategorizedTime: 0,
+      };
+    }
+
+    const totalSeconds = subject.tasks.reduce((acc, t) => acc + (t.timeSpentSeconds || 0), 0);
+    const tasksWithTime = subject.tasks.filter((t) => (t.timeSpentSeconds || 0) > 0);
+    const tasksWithTimeCount = tasksWithTime.length;
+    const avgSecondsPerTrackedTask =
+      tasksWithTimeCount > 0 ? Math.round(totalSeconds / tasksWithTimeCount) : 0;
+
+    const timeByCategory: Record<string, number> = {};
+    let uncategorizedTime = 0;
+
+    for (const t of subject.tasks) {
+      const sec = t.timeSpentSeconds || 0;
+      if (t.categoryId) {
+        timeByCategory[t.categoryId] = (timeByCategory[t.categoryId] || 0) + sec;
+      } else {
+        uncategorizedTime += sec;
+      }
+    }
+
+    return {
+      totalSeconds,
+      tasksWithTimeCount,
+      avgSecondsPerTrackedTask,
+      timeByCategory,
+      uncategorizedTime,
+    };
+  }, [subject]);
 
   const handleOpenCatCreate = () => {
     setEditingCategory(null);
