@@ -46,6 +46,7 @@ export interface TaskItem {
   createdAt?: string | null;
   timeSpentSeconds?: number;
   estimatedMinutes?: number;
+  progressPercent?: number;
   subject?: { id: string; name: string; color?: string | null };
   category?: { id: string; name: string } | null;
 }
@@ -79,6 +80,7 @@ export default function TaskFormDialog({
   const [urgencyOverride, setUrgencyOverride] = useState<string>('AUTO');
   const [estimatedHours, setEstimatedHours] = useState<number>(1);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number>(0);
+  const [progressPercent, setProgressPercent] = useState<number>(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +110,7 @@ export default function TaskFormDialog({
       const totalEst = initialTask.estimatedMinutes !== undefined && initialTask.estimatedMinutes !== null ? initialTask.estimatedMinutes : 60;
       setEstimatedHours(Math.floor(totalEst / 60));
       setEstimatedMinutes(totalEst % 60);
+      setProgressPercent(initialTask.progressPercent ?? (initialTask.status === TaskStatus.DONE ? 100 : 0));
     } else {
       setTitle('');
       setDescription('');
@@ -125,6 +128,7 @@ export default function TaskFormDialog({
       setUrgencyOverride('AUTO');
       setEstimatedHours(1);
       setEstimatedMinutes(0);
+      setProgressPercent(initialStatus === TaskStatus.DONE ? 100 : 0);
     }
     setError(null);
   }, [initialTask, initialStatus, open, subjects]);
@@ -159,6 +163,7 @@ export default function TaskFormDialog({
       priorityOverride: priorityOverride === 'AUTO' ? null : priorityOverride,
       urgencyOverride: urgencyOverride === 'AUTO' ? null : urgencyOverride,
       estimatedMinutes: calcEstimatedMinutes,
+      progressPercent,
     };
 
     try {
@@ -318,6 +323,50 @@ export default function TaskFormDialog({
                   size="small"
                 />
               </Stack>
+            </Box>
+
+            {/* Progress Percent Slider */}
+            <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  Postęp realizacji zadania
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 800,
+                    color: progressPercent === 100 ? 'success.main' : progressPercent > 0 ? 'primary.main' : 'text.secondary',
+                  }}
+                >
+                  {progressPercent}%
+                </Typography>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                Określ procent ukończenia zadania (od 0% do 100%).
+              </Typography>
+              <Slider
+                value={progressPercent}
+                onChange={(_, val) => {
+                  const num = val as number;
+                  setProgressPercent(num);
+                  if (num === 100) {
+                    setStatus(TaskStatus.DONE);
+                  } else if (status === TaskStatus.DONE && num < 100) {
+                    setStatus(TaskStatus.IN_PROGRESS);
+                  }
+                }}
+                min={0}
+                max={100}
+                step={5}
+                marks={[
+                  { value: 0, label: '0%' },
+                  { value: 25, label: '25%' },
+                  { value: 50, label: '50%' },
+                  { value: 75, label: '75%' },
+                  { value: 100, label: '100%' },
+                ]}
+                valueLabelDisplay="auto"
+              />
             </Box>
 
             {/* Due Date */}

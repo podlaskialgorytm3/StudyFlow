@@ -57,7 +57,24 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    const { durationSeconds, note } = parsed.data;
+    const { durationSeconds, note, progressPercent } = parsed.data;
+
+    const taskUpdates: Record<string, unknown> = {
+      timeSpentSeconds: {
+        increment: durationSeconds,
+      },
+    };
+
+    if (progressPercent !== undefined && progressPercent !== null) {
+      taskUpdates.progressPercent = progressPercent;
+      if (progressPercent === 100 && task.status !== TaskStatus.DONE) {
+        taskUpdates.status = TaskStatus.DONE;
+        taskUpdates.completedAt = new Date();
+      } else if (progressPercent < 100 && task.status === TaskStatus.DONE) {
+        taskUpdates.status = TaskStatus.IN_PROGRESS;
+        taskUpdates.completedAt = null;
+      }
+    }
 
     // Run creation and total time update in transaction
     const [entry, updatedTask] = await prisma.$transaction([
@@ -70,14 +87,12 @@ export async function POST(req: Request, { params }: RouteParams) {
       }),
       prisma.task.update({
         where: { id: params.id },
-        data: {
-          timeSpentSeconds: {
-            increment: durationSeconds,
-          },
-        },
+        data: taskUpdates,
         select: {
           id: true,
           timeSpentSeconds: true,
+          progressPercent: true,
+          status: true,
         },
       }),
     ]);
@@ -86,6 +101,8 @@ export async function POST(req: Request, { params }: RouteParams) {
       {
         entry,
         timeSpentSeconds: updatedTask.timeSpentSeconds,
+        progressPercent: updatedTask.progressPercent,
+        status: updatedTask.status,
       },
       { status: 201 }
     );

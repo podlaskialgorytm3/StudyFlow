@@ -510,6 +510,7 @@ export default function TasksPage() {
                   <TableCell sx={{ fontWeight: 700 }}>Przedmiot</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Story Points</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Estymacja</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Postęp</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Ćwiartka Eisenhowera</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Termin</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
@@ -616,6 +617,24 @@ export default function TasksPage() {
                           variant="outlined"
                           sx={{ fontWeight: 600, fontSize: '0.75rem' }}
                         />
+                      </TableCell>
+
+                      {/* Progress */}
+                      <TableCell onClick={() => router.push(`/tasks/${t.id}`)}>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 90 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, minWidth: 32 }}>
+                            {t.progressPercent ?? (isDone ? 100 : 0)}%
+                          </Typography>
+                          <Box sx={{ width: 50, bgcolor: '#e2e8f0', borderRadius: 1, height: 6, overflow: 'hidden' }}>
+                            <Box
+                              sx={{
+                                width: `${t.progressPercent ?? (isDone ? 100 : 0)}%`,
+                                bgcolor: (t.progressPercent === 100 || isDone) ? '#10b981' : '#3b82f6',
+                                height: '100%',
+                              }}
+                            />
+                          </Box>
+                        </Stack>
                       </TableCell>
 
                       {/* Eisenhower Quadrant */}

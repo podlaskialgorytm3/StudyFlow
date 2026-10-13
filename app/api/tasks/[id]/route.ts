@@ -88,12 +88,31 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       }
     }
 
-    // Determine completion timestamp
+    // Determine completion timestamp and status sync with progress
     let completedAt = existing.completedAt;
+    let nextStatus = data.status;
+    let nextProgress = data.progressPercent;
+
     if (data.status !== undefined) {
       if (data.status === TaskStatus.DONE && existing.status !== TaskStatus.DONE) {
         completedAt = new Date();
+        if (nextProgress === undefined) {
+          nextProgress = 100;
+        }
       } else if (data.status !== TaskStatus.DONE && existing.status === TaskStatus.DONE) {
+        completedAt = null;
+        if (nextProgress === undefined && existing.progressPercent === 100) {
+          nextProgress = 50; // default back from 100 when undone
+        }
+      }
+    }
+
+    if (nextProgress !== undefined && nextProgress !== null) {
+      if (nextProgress === 100 && nextStatus === undefined && existing.status !== TaskStatus.DONE) {
+        nextStatus = TaskStatus.DONE;
+        completedAt = new Date();
+      } else if (nextProgress < 100 && nextStatus === undefined && existing.status === TaskStatus.DONE) {
+        nextStatus = TaskStatus.IN_PROGRESS;
         completedAt = null;
       }
     }
@@ -107,11 +126,12 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
         ...(data.dueDate !== undefined ? { dueDate: data.dueDate ? new Date(data.dueDate) : null } : {}),
         ...(data.storyPoints !== undefined ? { storyPoints: data.storyPoints } : {}),
-        ...(data.status !== undefined ? { status: data.status, completedAt } : {}),
+        ...(nextStatus !== undefined ? { status: nextStatus, completedAt } : completedAt !== existing.completedAt ? { completedAt } : {}),
         ...(data.priorityOverride !== undefined ? { priorityOverride: data.priorityOverride } : {}),
         ...(data.urgencyOverride !== undefined ? { urgencyOverride: data.urgencyOverride } : {}),
         ...(data.timeSpentSeconds !== undefined ? { timeSpentSeconds: data.timeSpentSeconds } : {}),
         ...(data.estimatedMinutes !== undefined ? { estimatedMinutes: data.estimatedMinutes } : {}),
+        ...(nextProgress !== undefined ? { progressPercent: nextProgress } : {}),
       },
       include: {
         subject: {

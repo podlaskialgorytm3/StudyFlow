@@ -149,6 +149,12 @@ export default function EisenhowerMatrix({
               variant="outlined"
               sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600 }}
             />
+            <Chip
+              label={`${task.progressPercent ?? (task.status === TaskStatus.DONE ? 100 : 0)}%`}
+              size="small"
+              color={(task.progressPercent === 100 || task.status === TaskStatus.DONE) ? 'success' : (task.progressPercent && task.progressPercent > 0) ? 'primary' : 'default'}
+              sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }}
+            />
           </Stack>
         </Stack>
 

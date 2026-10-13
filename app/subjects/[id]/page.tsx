@@ -498,6 +498,7 @@ export default function SubjectDetailsPage() {
                           <TableCell sx={{ fontWeight: 700 }}>Kategoria</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Story Points</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Estymacja</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Postęp</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Poświęcony czas</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Termin</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
@@ -547,6 +548,14 @@ export default function SubjectDetailsPage() {
                                   size="small"
                                   variant="outlined"
                                   sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600 }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={`${t.progressPercent ?? (isDone ? 100 : 0)}%`}
+                                  size="small"
+                                  color={(t.progressPercent === 100 || isDone) ? 'success' : (t.progressPercent && t.progressPercent > 0) ? 'primary' : 'default'}
+                                  sx={{ height: 22, fontSize: '0.7rem', fontWeight: 700 }}
                                 />
                               </TableCell>
                               <TableCell>

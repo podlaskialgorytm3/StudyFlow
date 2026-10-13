@@ -327,6 +327,12 @@ export default function TaskDetailPage() {
                     sx={{ fontWeight: 700 }}
                   />
                   <Chip
+                    label={`Postęp: ${task.progressPercent ?? 0}%`}
+                    color={task.progressPercent === 100 || isDone ? 'success' : task.progressPercent && task.progressPercent > 0 ? 'primary' : 'default'}
+                    variant="filled"
+                    sx={{ fontWeight: 700 }}
+                  />
+                  <Chip
                     label={`Status: ${task.status}`}
                     color={isDone ? 'success' : 'default'}
                     variant={isDone ? 'filled' : 'outlined'}
@@ -585,8 +591,17 @@ export default function TaskDetailPage() {
               subjectColor={task.subject?.color || '#1976d2'}
               initialTimeSpentSeconds={task.timeSpentSeconds || 0}
               initialTimeEntries={task.timeEntries || []}
-              onTimeUpdated={(newTotal) => {
-                setTask((prev) => (prev ? { ...prev, timeSpentSeconds: newTotal } : prev));
+              initialProgressPercent={task.progressPercent ?? (task.status === TaskStatus.DONE ? 100 : 0)}
+              onTimeUpdated={(newTotal, newProgress) => {
+                setTask((prev) => {
+                  if (!prev) return prev;
+                  const updated: FullTaskItem = { ...prev, timeSpentSeconds: newTotal };
+                  if (typeof newProgress === 'number') {
+                    updated.progressPercent = newProgress;
+                    if (newProgress === 100) updated.status = TaskStatus.DONE;
+                  }
+                  return updated;
+                });
               }}
             />
           </Grid>

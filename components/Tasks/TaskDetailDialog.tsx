@@ -217,6 +217,11 @@ export default function TaskDetailDialog({
               sx={{ fontWeight: 700 }}
             />
             <Chip
+              label={`Postęp: ${task.progressPercent ?? 0}%`}
+              color={task.progressPercent === 100 || task.status === TaskStatus.DONE ? 'success' : task.progressPercent && task.progressPercent > 0 ? 'primary' : 'default'}
+              sx={{ fontWeight: 700 }}
+            />
+            <Chip
               label={`Status: ${task.status}`}
               color={task.status === TaskStatus.DONE ? 'success' : 'default'}
               sx={{ fontWeight: 600 }}

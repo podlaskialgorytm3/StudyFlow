@@ -25,6 +25,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Slider,
+  LinearProgress,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -55,7 +57,8 @@ interface TaskTimeTrackerProps {
   subjectColor?: string;
   initialTimeSpentSeconds?: number;
   initialTimeEntries?: TaskTimeEntryItem[];
-  onTimeUpdated?: (newTotalSeconds: number) => void;
+  initialProgressPercent?: number;
+  onTimeUpdated?: (newTotalSeconds: number, newProgressPercent?: number) => void;
 }
 
 export default function TaskTimeTracker({
@@ -65,11 +68,13 @@ export default function TaskTimeTracker({
   subjectColor = '#1976d2',
   initialTimeSpentSeconds = 0,
   initialTimeEntries = [],
+  initialProgressPercent = 0,
   onTimeUpdated,
 }: TaskTimeTrackerProps) {
   // Total logged time & entries history
   const [totalSeconds, setTotalSeconds] = useState<number>(initialTimeSpentSeconds);
   const [entries, setEntries] = useState<TaskTimeEntryItem[]>(initialTimeEntries);
+  const [progressPercent, setProgressPercent] = useState<number>(initialProgressPercent);
 
   // Active stopwatch state
   const [timerSeconds, setTimerSeconds] = useState<number>(0);
@@ -78,10 +83,12 @@ export default function TaskTimeTracker({
   // Dialogs
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveNote, setSaveNote] = useState('');
+  const [saveProgress, setSaveProgress] = useState<number>(initialProgressPercent);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
   const [manualHours, setManualHours] = useState<number>(0);
   const [manualMinutes, setManualMinutes] = useState<number>(15);
   const [manualNote, setManualNote] = useState('');
+  const [manualProgress, setManualProgress] = useState<number>(initialProgressPercent);
 
   // Fullscreen Focus Mode state
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -186,6 +193,7 @@ export default function TaskTimeTracker({
   const handleOpenSaveDialog = () => {
     setIsRunning(false);
     setSaveNote('');
+    setSaveProgress(progressPercent);
     setSaveDialogOpen(true);
   };
 
@@ -201,6 +209,7 @@ export default function TaskTimeTracker({
         body: JSON.stringify({
           durationSeconds: timerSeconds,
           note: saveNote.trim() || undefined,
+          progressPercent: saveProgress,
         }),
       });
 
@@ -209,13 +218,16 @@ export default function TaskTimeTracker({
         setError(data.error || 'Błąd podczas zapisywania sesji czasu');
       } else {
         setTotalSeconds(data.timeSpentSeconds);
+        if (typeof data.progressPercent === 'number') {
+          setProgressPercent(data.progressPercent);
+        }
         setEntries((prev) => [data.entry, ...prev]);
-        setSuccessMsg(`Zapisano sesję: ${formatHumanDuration(timerSeconds)}`);
+        setSuccessMsg(`Zapisano sesję: ${formatHumanDuration(timerSeconds)} (Postęp: ${saveProgress}%)`);
         setTimerSeconds(0);
         localStorage.removeItem(`studyflow_stopwatch_${taskId}`);
         setSaveDialogOpen(false);
         if (onTimeUpdated) {
-          onTimeUpdated(data.timeSpentSeconds);
+          onTimeUpdated(data.timeSpentSeconds, data.progressPercent);
         }
       }
     } catch {
@@ -243,6 +255,7 @@ export default function TaskTimeTracker({
         body: JSON.stringify({
           durationSeconds: duration,
           note: manualNote.trim() || undefined,
+          progressPercent: manualProgress,
         }),
       });
 
@@ -251,14 +264,17 @@ export default function TaskTimeTracker({
         setError(data.error || 'Błąd podczas odnotowywania czasu');
       } else {
         setTotalSeconds(data.timeSpentSeconds);
+        if (typeof data.progressPercent === 'number') {
+          setProgressPercent(data.progressPercent);
+        }
         setEntries((prev) => [data.entry, ...prev]);
-        setSuccessMsg(`Odnotowano czas: ${formatHumanDuration(duration)}`);
+        setSuccessMsg(`Odnotowano czas: ${formatHumanDuration(duration)} (Postęp: ${manualProgress}%)`);
         setManualDialogOpen(false);
         setManualHours(0);
         setManualMinutes(15);
         setManualNote('');
         if (onTimeUpdated) {
-          onTimeUpdated(data.timeSpentSeconds);
+          onTimeUpdated(data.timeSpentSeconds, data.progressPercent);
         }
       }
     } catch {
@@ -480,36 +496,59 @@ export default function TaskTimeTracker({
           </Stack>
         </Box>
 
-        {/* Total Time Summary Card */}
+        {/* Total Time & Progress Summary Card */}
         <Box
           sx={{
-            p: 2,
+            p: 2.5,
             bgcolor: '#ffffff',
             border: '1px solid #e2e8f0',
             borderRadius: 2,
-            display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            justifyContent: 'space-between',
-            alignItems: { sm: 'center' },
-            gap: 1.5,
             mb: 3,
           }}
         >
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Łączny czas poświęcony na to zadanie
-            </Typography>
-            <Typography variant="h5" color="primary" sx={{ fontWeight: 800 }}>
-              {formatHumanDuration(totalSeconds)}
-            </Typography>
-          </Box>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ sm: 'center' }}
+            spacing={2}
+          >
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Łączny czas poświęcony na to zadanie
+              </Typography>
+              <Typography variant="h5" color="primary" sx={{ fontWeight: 800 }}>
+                {formatHumanDuration(totalSeconds)}
+              </Typography>
+            </Box>
 
-          <Stack direction="row" spacing={1} alignItems="center">
+            <Box sx={{ minWidth: { sm: 220 } }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Aktualny postęp zadania
+                </Typography>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontWeight: 800,
+                    color: progressPercent === 100 ? 'success.main' : 'primary.main',
+                  }}
+                >
+                  {progressPercent}%
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={progressPercent}
+                color={progressPercent === 100 ? 'success' : 'primary'}
+                sx={{ height: 8, borderRadius: 4 }}
+              />
+            </Box>
+
             <Chip
               label={`${entries.length} ${entries.length === 1 ? 'zapisana sesja' : entries.length > 1 && entries.length < 5 ? 'zapisane sesje' : 'zapisanych sesji'}`}
               variant="outlined"
               size="small"
-              sx={{ fontWeight: 600 }}
+              sx={{ fontWeight: 600, alignSelf: { xs: 'flex-start', sm: 'center' } }}
             />
           </Stack>
         </Box>
@@ -581,7 +620,7 @@ export default function TaskTimeTracker({
         >
           <DialogTitle sx={{ fontWeight: 700 }}>Zapisz czas sesji</DialogTitle>
           <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack spacing={2.5} sx={{ mt: 1 }}>
               <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, textAlign: 'center' }}>
                 <Typography variant="caption" color="text.secondary">
                   Zmierzony czas do zapisania:
@@ -589,6 +628,40 @@ export default function TaskTimeTracker({
                 <Typography variant="h5" color="primary" sx={{ fontWeight: 800 }}>
                   {formatHumanDuration(timerSeconds)}
                 </Typography>
+              </Box>
+
+              {/* Progress Slider */}
+              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    Postęp zadania po tej sesji
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                      color: saveProgress === 100 ? 'success.main' : 'primary.main',
+                    }}
+                  >
+                    {saveProgress}%
+                  </Typography>
+                </Stack>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Ile procent zadania udało się zrealizować?
+                </Typography>
+                <Slider
+                  value={saveProgress}
+                  onChange={(_, val) => setSaveProgress(val as number)}
+                  min={0}
+                  max={100}
+                  step={5}
+                  marks={[
+                    { value: 0, label: '0%' },
+                    { value: 50, label: '50%' },
+                    { value: 100, label: '100%' },
+                  ]}
+                  valueLabelDisplay="auto"
+                />
               </Box>
 
               <TextField
@@ -612,7 +685,7 @@ export default function TaskTimeTracker({
               color="success"
               disabled={submitting}
             >
-              {submitting ? 'Zapisywanie...' : 'Zapisz czas'}
+              {submitting ? 'Zapisywanie...' : 'Zapisz czas i postęp'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -630,7 +703,7 @@ export default function TaskTimeTracker({
             <DialogContent>
               <Stack spacing={2.5} sx={{ mt: 1 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Wpisz ile czasu spędziłeś nad tym zadaniem poza aplikacją.
+                  Wpisz ile czasu spędziłeś nad tym zadaniem poza aplikacją oraz zaktualizuj postęp.
                 </Typography>
 
                 <Stack direction="row" spacing={2}>
@@ -652,6 +725,37 @@ export default function TaskTimeTracker({
                   />
                 </Stack>
 
+                {/* Manual Progress Slider */}
+                <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      Postęp zadania
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 800,
+                        color: manualProgress === 100 ? 'success.main' : 'primary.main',
+                      }}
+                    >
+                      {manualProgress}%
+                    </Typography>
+                  </Stack>
+                  <Slider
+                    value={manualProgress}
+                    onChange={(_, val) => setManualProgress(val as number)}
+                    min={0}
+                    max={100}
+                    step={5}
+                    marks={[
+                      { value: 0, label: '0%' },
+                      { value: 50, label: '50%' },
+                      { value: 100, label: '100%' },
+                    ]}
+                    valueLabelDisplay="auto"
+                  />
+                </Box>
+
                 <TextField
                   label="Notatka (opcjonalnie)"
                   placeholder="np. Praca nad projektem w bibliotece"
@@ -668,7 +772,7 @@ export default function TaskTimeTracker({
                 Anuluj
               </Button>
               <Button type="submit" variant="contained" color="primary" disabled={submitting}>
-                {submitting ? 'Zapisywanie...' : 'Dodaj wpis'}
+                {submitting ? 'Zapisywanie...' : 'Dodaj wpis i postęp'}
               </Button>
             </DialogActions>
           </Box>

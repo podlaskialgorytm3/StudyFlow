@@ -380,8 +380,8 @@ export default function TaskKanbanBoard({
                           </Typography>
                         )}
 
-                        {/* Category & Eisenhower Quadrant Badge */}
-                        <Stack direction="row" spacing={0.75} flexWrap="wrap" sx={{ mb: 1.5, gap: 0.5 }}>
+                        {/* Category & Eisenhower Quadrant Badge & Progress */}
+                        <Stack direction="row" spacing={0.75} flexWrap="wrap" alignItems="center" sx={{ mb: 1, gap: 0.5 }}>
                           {t.category && (
                             <Chip
                               label={t.category.name}
@@ -406,12 +406,31 @@ export default function TaskKanbanBoard({
                             />
                           </Tooltip>
 
+                          <Chip
+                            label={`${t.progressPercent ?? (isDone ? 100 : 0)}%`}
+                            size="small"
+                            color={(t.progressPercent === 100 || isDone) ? 'success' : (t.progressPercent && t.progressPercent > 0) ? 'primary' : 'default'}
+                            sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }}
+                          />
+
                           {isOverridden && (
                             <Tooltip title="Ręcznie nadpisana w macierzy">
                               <EditNoteIcon fontSize="small" color="action" />
                             </Tooltip>
                           )}
                         </Stack>
+
+                        {/* Visual Progress Bar */}
+                        <Box sx={{ width: '100%', bgcolor: '#f1f5f9', borderRadius: 1, height: 4, mb: 1.5, overflow: 'hidden' }}>
+                          <Box
+                            sx={{
+                              width: `${t.progressPercent ?? (isDone ? 100 : 0)}%`,
+                              bgcolor: (t.progressPercent === 100 || isDone) ? '#10b981' : '#3b82f6',
+                              height: '100%',
+                              transition: 'width 0.3s ease',
+                            }}
+                          />
+                        </Box>
 
                         {/* Due Date & Action controls */}
                         <Stack direction="row" justifyContent="space-between" alignItems="center">

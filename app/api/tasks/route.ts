@@ -90,6 +90,7 @@ export async function POST(req: Request) {
       priorityOverride,
       urgencyOverride,
       estimatedMinutes,
+      progressPercent,
     } = parsed.data;
 
     // 1. Check subject ownership
@@ -118,6 +119,9 @@ export async function POST(req: Request) {
       }
     }
 
+    // If progress is 100%, consider marking DONE if status wasn't set to DONE
+    const effectiveStatus = progressPercent === 100 && status !== TaskStatus.DONE ? TaskStatus.DONE : status;
+
     const task = await prisma.task.create({
       data: {
         ownerId: session.userId,
@@ -127,11 +131,12 @@ export async function POST(req: Request) {
         description: description || null,
         dueDate: dueDate ? new Date(dueDate) : null,
         storyPoints,
-        status,
-        completedAt: status === TaskStatus.DONE ? new Date() : null,
+        status: effectiveStatus,
+        completedAt: effectiveStatus === TaskStatus.DONE ? new Date() : null,
         priorityOverride: priorityOverride || null,
         urgencyOverride: urgencyOverride || null,
         estimatedMinutes: estimatedMinutes ?? 60,
+        progressPercent: effectiveStatus === TaskStatus.DONE ? 100 : (progressPercent ?? 0),
       },
       include: {
         subject: {
