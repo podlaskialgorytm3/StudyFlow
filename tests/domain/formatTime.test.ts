@@ -18,3 +18,4 @@ describe('formatTime utils', () => {
     expect(formatHumanDuration(3660)).toBe('1 godz. 1 min');
   });
 });
+

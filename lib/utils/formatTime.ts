@@ -36,3 +36,4 @@ export function formatHumanDuration(totalSeconds: number): string {
 
   return parts.join(' ') || '0 min';
 }
+
