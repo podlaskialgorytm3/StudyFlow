@@ -205,8 +205,8 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveCredentials = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveCredentials = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e?.preventDefault) e.preventDefault();
     if (!customClientId.trim() || !customClientSecret.trim()) {
       setCredentialsMsg({ type: 'error', text: 'Wprowadź zarówno Client ID, jak i Client Secret' });
       return;
@@ -655,8 +655,7 @@ export default function SettingsPage() {
                 {/* Expandable Credentials Form */}
                 <Collapse in={showCredentialsForm || !googleConfigured}>
                   <Box
-                    component="form"
-                    onSubmit={handleSaveCredentials}
+                    component="div"
                     sx={{
                       p: 2.5,
                       bgcolor: '#ffffff',
@@ -665,6 +664,24 @@ export default function SettingsPage() {
                       mb: 3,
                     }}
                   >
+                    {/* Hidden dummy fields to prevent browser password managers from pre-filling login credentials */}
+                    <input
+                      type="text"
+                      name="fake_username_remember"
+                      style={{ display: 'none' }}
+                      tabIndex={-1}
+                      autoComplete="off"
+                      aria-hidden="true"
+                    />
+                    <input
+                      type="password"
+                      name="fake_password_remember"
+                      style={{ display: 'none' }}
+                      tabIndex={-1}
+                      autoComplete="new-password"
+                      aria-hidden="true"
+                    />
+
                     <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                       <VpnKeyIcon color="primary" fontSize="small" />
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -728,25 +745,49 @@ export default function SettingsPage() {
 
                     <Stack spacing={2} sx={{ mb: 2.5 }}>
                       <TextField
+                        id="sf_google_client_id_input"
+                        name="sf_google_client_id_input"
                         label="Google Client ID"
                         placeholder="np. 123456789-abcdef.apps.googleusercontent.com"
                         value={customClientId}
                         onChange={(e) => setCustomClientId(e.target.value)}
+                        autoComplete="off"
                         fullWidth
                         size="small"
                         required
+                        inputProps={{
+                          autoComplete: 'off',
+                          autoCorrect: 'off',
+                          autoCapitalize: 'off',
+                          spellCheck: false,
+                          'data-lpignore': 'true',
+                          'data-1p-ignore': 'true',
+                          'data-form-type': 'other',
+                        }}
                         helperText="Client ID wygenerowany w Google Cloud Console (OAuth 2.0 Client IDs)"
                       />
 
                       <TextField
+                        id="sf_google_client_secret_input"
+                        name="sf_google_client_secret_input"
                         label="Google Client Secret"
                         placeholder="Wklej sekret klienta Google..."
                         type={showClientSecret ? 'text' : 'password'}
                         value={customClientSecret}
                         onChange={(e) => setCustomClientSecret(e.target.value)}
+                        autoComplete="new-password"
                         fullWidth
                         size="small"
                         required
+                        inputProps={{
+                          autoComplete: 'new-password',
+                          autoCorrect: 'off',
+                          autoCapitalize: 'off',
+                          spellCheck: false,
+                          'data-lpignore': 'true',
+                          'data-1p-ignore': 'true',
+                          'data-form-type': 'other',
+                        }}
                         InputProps={{
                           endAdornment: (
                             <InputAdornment position="end">
@@ -775,7 +816,8 @@ export default function SettingsPage() {
                         </Button>
                       )}
                       <Button
-                        type="submit"
+                        type="button"
+                        onClick={() => handleSaveCredentials()}
                         variant="contained"
                         color="primary"
                         startIcon={
