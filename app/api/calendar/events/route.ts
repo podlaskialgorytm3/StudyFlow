@@ -77,18 +77,17 @@ export async function GET(req: Request) {
         userId: session.userId,
         status: { not: 'cancelled' },
         OR: [
-          // Non-all-day events within range
+          // Non-all-day and all-day events within range
           {
-            isAllDay: false,
             startDateTime: { lte: endDate },
             endDateTime: { gte: startDate },
           },
-          // All-day events within range
+          // All-day events within range (with 1 day buffer for timezones)
           {
             isAllDay: true,
             allDayDate: {
-              gte: startDate.toISOString().slice(0, 10),
-              lte: endDate.toISOString().slice(0, 10),
+              gte: new Date(startDate.getTime() - 24 * 3600 * 1000).toISOString().slice(0, 10),
+              lte: new Date(endDate.getTime() + 24 * 3600 * 1000).toISOString().slice(0, 10),
             },
           },
         ],
