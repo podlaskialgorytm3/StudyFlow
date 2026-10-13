@@ -40,7 +40,9 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import DateRangeIcon from '@mui/icons-material/DateRange';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import AppNavbar from '@/components/Navigation/AppNavbar';
 import TaskFormDialog, { TaskItem, SubjectItem } from '@/components/Tasks/TaskFormDialog';
@@ -63,6 +65,7 @@ interface TaskPageSettings extends EisenhowerSettings {
 }
 
 export default function TasksPage() {
+  const router = useRouter();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [settings, setSettings] = useState<TaskPageSettings>({

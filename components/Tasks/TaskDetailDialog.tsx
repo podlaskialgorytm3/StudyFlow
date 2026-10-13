@@ -23,6 +23,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RotateLeftIcon from '@mui/icons-material/RotateLeft';
 import SwapCallsIcon from '@mui/icons-material/SwapCalls';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import Link from 'next/link';
 import { TaskItem } from './TaskFormDialog';
 import {
   classifyEisenhowerTask,
@@ -369,6 +371,16 @@ export default function TaskDetailDialog({
           <IconButton onClick={() => onEdit(task)} color="primary" title="Edytuj zadanie" disabled={loading}>
             <EditIcon />
           </IconButton>
+          <Button
+            component={Link}
+            href={`/tasks/${task.id}`}
+            size="small"
+            variant="outlined"
+            startIcon={<OpenInNewIcon />}
+            sx={{ ml: 1 }}
+          >
+            Pełna strona i timer
+          </Button>
         </Stack>
 
         <Stack direction="row" spacing={1.5}>
