@@ -74,5 +74,11 @@ export const settingsSchema = z.object({
     .int('Próg pilności w dniach musi być liczbą całkowitą')
     .min(0, 'Próg pilności w dniach nie może być ujemny')
     .max(365, 'Maksymalny próg to 365 dni'),
+  taskHorizonDays: z
+    .number()
+    .int('Interwał musi być liczbą całkowitą')
+    .min(1, 'Minimalny interwał to 1 dzień')
+    .max(90, 'Maksymalny interwał to 90 dni')
+    .default(7),
 });
 

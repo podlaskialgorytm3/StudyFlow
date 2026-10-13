@@ -51,6 +51,7 @@ model UserSettings {
   user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   importantStoryPointsThreshold Int      @default(6)
   urgentWithinDays             Int      @default(3)
+  taskHorizonDays              Int      @default(7)
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
 
