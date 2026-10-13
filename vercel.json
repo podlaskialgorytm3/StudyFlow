@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/reports/cron",
+      "schedule": "0 20 * * 0"
+    },
+    {
+      "path": "/api/calendar/sync/cron",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}
+
