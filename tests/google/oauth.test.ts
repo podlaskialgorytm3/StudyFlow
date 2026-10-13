@@ -59,9 +59,9 @@ describe('Google Calendar OAuth 2.0 and State Security', () => {
   });
 
   it('verifies state match between callback param and cookie to prevent CSRF', () => {
-    const validCookieState = 'state_cookie_value_123';
-    const callbackState = 'state_cookie_value_123';
-    const attackerState = 'attacker_forged_state_456';
+    const validCookieState: string = 'state_cookie_value_123';
+    const callbackState: string = 'state_cookie_value_123';
+    const attackerState: string = 'attacker_forged_state_456';
 
     const isValidRequest = callbackState === validCookieState;
     const isAttackerRequest = attackerState === validCookieState;

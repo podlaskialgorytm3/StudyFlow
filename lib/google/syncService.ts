@@ -64,8 +64,9 @@ export async function syncUserGoogleCalendar(userId: string, options?: { forceFu
     let syncToken = options?.forceFullSync ? null : account.syncToken;
     let pageToken: string | undefined = undefined;
     let newSyncToken: string | undefined = undefined;
+    let hasMorePages = true;
 
-    do {
+    while (hasMorePages) {
       const params: calendar_v3.Params$Resource$Events$List = {
         calendarId,
         maxResults: 250,
@@ -97,6 +98,7 @@ export async function syncUserGoogleCalendar(userId: string, options?: { forceFu
           });
           syncToken = null;
           pageToken = undefined;
+          hasMorePages = true;
           continue;
         }
         throw err;
@@ -201,7 +203,8 @@ export async function syncUserGoogleCalendar(userId: string, options?: { forceFu
           imported++;
         }
       }
-    } while (pageToken);
+      hasMorePages = Boolean(pageToken);
+    }
 
     // Save final state
     const nextSyncAt = new Date(Date.now() + (account.syncFrequencyHours || 3) * 3600 * 1000);
