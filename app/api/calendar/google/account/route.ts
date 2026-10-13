@@ -58,15 +58,22 @@ export async function GET() {
   try {
     const { calendar } = await getAuthenticatedCalendarClient(session.userId);
     const listRes = await calendar.calendarList.list();
-    calendars = (listRes.data.items || []).map((item) => ({
+    const rawItems = (listRes.data.items || []).map((item) => ({
       id: item.id || '',
       summary: item.summary || '(Bez nazwy)',
       primary: Boolean(item.primary),
       description: item.description || undefined,
     }));
+    calendars = [
+      { id: 'all', summary: '✨ Wszystkie kalendarze (zalecane)', primary: false },
+      ...rawItems,
+    ];
   } catch {
     // If fetching fails (e.g. token expired and couldn't refresh), return existing selected calendar
-    calendars = [{ id: account.selectedCalendarId, summary: account.selectedCalendarName || 'Podstawowy', primary: true }];
+    calendars = [
+      { id: 'all', summary: '✨ Wszystkie kalendarze (zalecane)', primary: false },
+      { id: account.selectedCalendarId, summary: account.selectedCalendarName || 'Podstawowy', primary: true },
+    ];
   }
 
   return NextResponse.json({

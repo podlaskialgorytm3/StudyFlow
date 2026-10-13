@@ -11,6 +11,7 @@ vi.mock('@/lib/prisma', () => ({
     },
     googleCalendarEvent: {
       findUnique: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
       create: vi.fn(),
       update: vi.fn(),
       deleteMany: vi.fn(),

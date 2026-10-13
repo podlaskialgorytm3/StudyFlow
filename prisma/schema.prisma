@@ -92,8 +92,10 @@ model GoogleCalendarEvent {
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   googleEventId String
-  calendarId   String   @default("primary")
-  summary      String
+  calendarId    String    @default("primary")
+  calendarName  String?
+  calendarColor String?
+  summary       String
   description  String?
   location     String?
   startDateTime DateTime?

@@ -13,6 +13,7 @@ export interface UnifiedCalendarItem {
   end: string;   // ISO string
   isAllDay: boolean;
   color?: string | null;
+  calendarName?: string | null;
   url?: string | null;
   // Specific StudyFlow properties
   studyflowMeta?: {
@@ -113,7 +114,8 @@ export async function GET(req: Request) {
         start: startStr,
         end: endStr,
         isAllDay: gev.isAllDay,
-        color: '#4285F4', // Google Calendar signature blue
+        color: gev.calendarColor || gev.colorId || '#4285F4',
+        calendarName: gev.calendarName,
         url: gev.htmlLink,
       });
     }

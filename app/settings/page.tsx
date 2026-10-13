@@ -950,7 +950,7 @@ export default function SettingsPage() {
                         <InputLabel>Kalendarz Google</InputLabel>
                         <Select
                           label="Kalendarz Google"
-                          value={googleAccount?.selectedCalendarId || 'primary'}
+                          value={googleAccount?.selectedCalendarId || 'all'}
                           onChange={(e) =>
                             handleUpdateGoogleCalendarPreferences(
                               e.target.value,

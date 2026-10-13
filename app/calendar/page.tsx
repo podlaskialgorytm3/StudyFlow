@@ -496,7 +496,7 @@ export default function CalendarPage() {
                       <Chip
                         key={item.id}
                         size="small"
-                        label={item.title}
+                        label={item.calendarName ? `${item.calendarName}: ${item.title}` : item.title}
                         onClick={() => setSelectedEvent(item)}
                         sx={{
                           height: 22,
@@ -646,9 +646,10 @@ export default function CalendarPage() {
                           >
                             {item.title}
                           </Typography>
-                          <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.9 }}>
+                          <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.9, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {start.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })} –{' '}
                             {end.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                            {item.calendarName ? ` • ${item.calendarName}` : ''}
                           </Typography>
                         </Box>
                       );
@@ -682,9 +683,9 @@ export default function CalendarPage() {
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Chip
                       size="small"
-                      label={selectedEvent.source === 'google' ? 'Google Calendar' : 'Zadanie StudyFlow'}
+                      label={selectedEvent.source === 'google' ? (selectedEvent.calendarName ? `Google: ${selectedEvent.calendarName}` : 'Google Calendar') : 'Zadanie StudyFlow'}
                       sx={{
-                        bgcolor: selectedEvent.source === 'google' ? '#4285F4' : '#10b981',
+                        bgcolor: selectedEvent.color || (selectedEvent.source === 'google' ? '#4285F4' : '#10b981'),
                         color: '#fff',
                         fontWeight: 700,
                       }}
