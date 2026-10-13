@@ -779,3 +779,4 @@ export async function runWeeklyReportCronForAllUsers(referenceDate: Date = new D
     results,
   };
 }
+

@@ -22,6 +22,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import EventIcon from '@mui/icons-material/Event';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import Link from 'next/link';
 
 import AppNavbar from '@/components/Navigation/AppNavbar';
@@ -160,6 +161,15 @@ export default function DashboardPage() {
               }}
             >
               Tryb skupienia
+            </Button>
+            <Button
+              component={Link}
+              href="/reports"
+              variant="outlined"
+              color="primary"
+              startIcon={<AssessmentIcon />}
+            >
+              Raporty PDF
             </Button>
             <Button
               component={Link}
