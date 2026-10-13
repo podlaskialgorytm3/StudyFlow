@@ -33,7 +33,7 @@ export async function GET(req: Request) {
       maxAge: 10 * 60, // 10 minutes
     });
 
-    const authUrl = generateAuthUrl(state);
+    const authUrl = await generateAuthUrl(state, session.userId);
     return NextResponse.redirect(authUrl);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
