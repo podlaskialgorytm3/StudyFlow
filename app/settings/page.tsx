@@ -553,11 +553,246 @@ export default function SettingsPage() {
                   </Alert>
                 )}
 
-                {!googleConfigured && (
-                  <Alert severity="warning" sx={{ mb: 2.5 }}>
-                    Integracja Google OAuth wymaga skonfigurowania zmiennych środowiskowych <code>GOOGLE_CLIENT_ID</code> oraz <code>GOOGLE_CLIENT_SECRET</code> w pliku <code>.env</code>.
+                {credentialsMsg && (
+                  <Alert
+                    severity={credentialsMsg.type}
+                    sx={{ mb: 2.5 }}
+                    onClose={() => setCredentialsMsg(null)}
+                  >
+                    {credentialsMsg.text}
                   </Alert>
                 )}
+
+                {/* Banner when NOT configured at all */}
+                {!googleConfigured && (
+                  <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{ mb: 2.5 }}>
+                    Integracja z Google Calendar wymaga danych aplikacji z Google Cloud Console. Możesz wprowadzić poniżej swój <strong>Client ID</strong> oraz <strong>Client Secret</strong> — zostaną one <strong>bezpiecznie zaszyfrowane w bazie danych (AES-256-GCM)</strong> dla Twojego konta. Nie musisz edytować żadnych plików na serwerze!
+                  </Alert>
+                )}
+
+                {/* Custom Credentials Badge when active in DB */}
+                {hasCustomCredentials && (
+                  <Box
+                    sx={{
+                      p: 2,
+                      bgcolor: '#f0fdf4',
+                      borderRadius: 2,
+                      border: '1px solid #bbf7d0',
+                      mb: 2.5,
+                    }}
+                  >
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      justifyContent="space-between"
+                      alignItems={{ sm: 'center' }}
+                      spacing={1.5}
+                    >
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <CheckCircleIcon color="success" />
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#166534' }}>
+                            Własne poświadczenia Google API aktywne (Zaszyfrowane w bazie danych)
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#15803d' }}>
+                            Client ID: <code>{maskedClientId || '••••••••'}</code> (szyfrowanie AES-256-GCM)
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setShowCredentialsForm((prev) => !prev)}
+                        >
+                          {showCredentialsForm ? 'Ukryj formularz' : 'Zmień klucze'}
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          startIcon={<DeleteOutlineIcon />}
+                          onClick={handleDeleteCredentials}
+                          disabled={deletingCredentials}
+                        >
+                          Usuń z bazy
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                )}
+
+                {/* If configured via .env without custom keys */}
+                {googleConfigured && !hasCustomCredentials && (
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      bgcolor: '#f8fafc',
+                      borderRadius: 2,
+                      border: '1px solid #e2e8f0',
+                      mb: 2.5,
+                    }}
+                  >
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      justifyContent="space-between"
+                      alignItems={{ sm: 'center' }}
+                      spacing={1}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        Używana jest globalna konfiguracja serwera Google OAuth (zmienne środowiskowe).
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => setShowCredentialsForm((prev) => !prev)}
+                      >
+                        {showCredentialsForm ? 'Ukryj formularz' : 'Chcesz użyć własnych kluczy w bazie? Kliknij'}
+                      </Button>
+                    </Stack>
+                  </Box>
+                )}
+
+                {/* Expandable Credentials Form */}
+                <Collapse in={showCredentialsForm || !googleConfigured}>
+                  <Box
+                    component="form"
+                    onSubmit={handleSaveCredentials}
+                    sx={{
+                      p: 2.5,
+                      bgcolor: '#ffffff',
+                      borderRadius: 2.5,
+                      border: '1.5px dashed #cbd5e1',
+                      mb: 3,
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                      <VpnKeyIcon color="primary" fontSize="small" />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        Wprowadź dane z Google Cloud Console
+                      </Typography>
+                      <Chip
+                        icon={<LockOutlinedIcon />}
+                        label="Szyfrowanie AES-256-GCM"
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Wklej poniżej dane ze swojego projektu w Google Cloud Platform. Twoje klucze zostaną zaszyfrowane bezpiecznym algorytmem AES-256-GCM i zapisane w bazie danych powiązanej z Twoim kontem użytkownika.
+                    </Typography>
+
+                    {/* Redirect URI with copy button */}
+                    <Box
+                      sx={{
+                        p: 1.5,
+                        bgcolor: '#f8fafc',
+                        borderRadius: 1.5,
+                        border: '1px solid #e2e8f0',
+                        mb: 2.5,
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 700 }}>
+                        Adres URI przekierowania (Redirect URI) — skopiuj i wklej w Google Cloud Console:
+                      </Typography>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: 'monospace',
+                            bgcolor: '#ffffff',
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            border: '1px solid #cbd5e1',
+                            flexGrow: 1,
+                            wordBreak: 'break-all',
+                          }}
+                        >
+                          {redirectUri ||
+                            (typeof window !== 'undefined'
+                              ? `${window.location.origin}/api/auth/google/callback`
+                              : 'http://localhost:3000/api/auth/google/callback')}
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<ContentCopyIcon />}
+                          onClick={handleCopyRedirectUri}
+                          sx={{ flexShrink: 0 }}
+                        >
+                          {copiedRedirectUri ? 'Skopiowano!' : 'Kopiuj URI'}
+                        </Button>
+                      </Stack>
+                    </Box>
+
+                    <Stack spacing={2} sx={{ mb: 2.5 }}>
+                      <TextField
+                        label="Google Client ID"
+                        placeholder="np. 123456789-abcdef.apps.googleusercontent.com"
+                        value={customClientId}
+                        onChange={(e) => setCustomClientId(e.target.value)}
+                        fullWidth
+                        size="small"
+                        required
+                        helperText="Client ID wygenerowany w Google Cloud Console (OAuth 2.0 Client IDs)"
+                      />
+
+                      <TextField
+                        label="Google Client Secret"
+                        placeholder="Wklej sekret klienta Google..."
+                        type={showClientSecret ? 'text' : 'password'}
+                        value={customClientSecret}
+                        onChange={(e) => setCustomClientSecret(e.target.value)}
+                        fullWidth
+                        size="small"
+                        required
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                size="small"
+                                onClick={() => setShowClientSecret((prev) => !prev)}
+                                edge="end"
+                              >
+                                {showClientSecret ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                        helperText="Client Secret — zostanie zaszyfrowany przed zapisaniem w bazie danych"
+                      />
+                    </Stack>
+
+                    <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+                      {hasCustomCredentials && (
+                        <Button
+                          variant="text"
+                          onClick={() => setShowCredentialsForm(false)}
+                          disabled={savingCredentials}
+                        >
+                          Anuluj
+                        </Button>
+                      )}
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        startIcon={
+                          savingCredentials ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <LockOutlinedIcon />
+                          )
+                        }
+                        disabled={savingCredentials || !customClientId.trim() || !customClientSecret.trim()}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {savingCredentials ? 'Szyfrowanie i zapisywanie...' : 'Zapisz i zaszyfruj klucze'}
+                      </Button>
+                    </Stack>
+                  </Box>
+                </Collapse>
 
                 {/* Status & Connect / Disconnect */}
                 <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', mb: 3 }}>
@@ -583,6 +818,11 @@ export default function SettingsPage() {
                       {googleConnected && googleAccount?.googleEmail && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                           Zalogowany jako: <strong>{googleAccount.googleEmail}</strong>
+                        </Typography>
+                      )}
+                      {!googleConnected && !googleConfigured && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                          Wprowadź i zapisz powyżej klucze Google API, aby aktywować przycisk połączenia.
                         </Typography>
                       )}
                     </Box>

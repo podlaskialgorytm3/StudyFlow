@@ -46,8 +46,10 @@ describe('OAuth Token Encryption (AES-256-GCM)', () => {
     const encrypted = encryptToken(token);
     const parts = encrypted.split(':');
 
-    // Tamper with auth tag
-    const tamperedTag = parts[1].replace(/^[0-9a-f]/, '0');
+    // Tamper with auth tag by flipping first character
+    const firstChar = parts[1][0];
+    const replacement = firstChar === '0' ? '1' : '0';
+    const tamperedTag = replacement + parts[1].slice(1);
     const tamperedToken = `${parts[0]}:${tamperedTag}:${parts[2]}`;
 
     expect(() => decryptToken(tamperedToken)).toThrow();
