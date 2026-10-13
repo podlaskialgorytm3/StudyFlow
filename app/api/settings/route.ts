@@ -44,7 +44,13 @@ export async function PATCH(req: Request) {
       );
     }
 
-    const { importantStoryPointsThreshold, urgentWithinDays, taskHorizonDays } = parsed.data;
+    const {
+      importantStoryPointsThreshold,
+      urgentWithinDays,
+      taskHorizonDays,
+      calendarShowGoogleEvents,
+      calendarShowStudyFlowTasks,
+    } = parsed.data;
 
     const settings = await prisma.userSettings.upsert({
       where: { userId: session.userId },
@@ -52,12 +58,16 @@ export async function PATCH(req: Request) {
         importantStoryPointsThreshold,
         urgentWithinDays,
         taskHorizonDays,
+        ...(calendarShowGoogleEvents !== undefined ? { calendarShowGoogleEvents } : {}),
+        ...(calendarShowStudyFlowTasks !== undefined ? { calendarShowStudyFlowTasks } : {}),
       },
       create: {
         userId: session.userId,
         importantStoryPointsThreshold,
         urgentWithinDays,
         taskHorizonDays: taskHorizonDays ?? 7,
+        calendarShowGoogleEvents: calendarShowGoogleEvents ?? true,
+        calendarShowStudyFlowTasks: calendarShowStudyFlowTasks ?? true,
       },
     });
 

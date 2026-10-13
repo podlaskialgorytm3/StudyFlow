@@ -7,7 +7,7 @@ const SECRET_KEY = new TextEncoder().encode(
   process.env.SESSION_SECRET || 'studyflow_default_fallback_secret_must_be_32_characters_long'
 );
 
-const PROTECTED_PREFIXES = ['/dashboard', '/tasks', '/subjects', '/settings', '/admin'];
+const PROTECTED_PREFIXES = ['/dashboard', '/calendar', '/tasks', '/subjects', '/settings', '/admin'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -50,6 +50,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
+    '/calendar/:path*',
     '/tasks/:path*',
     '/subjects/:path*',
     '/settings/:path*',

@@ -104,5 +104,7 @@ export const settingsSchema = z.object({
     .min(1, 'Minimalny interwał to 1 dzień')
     .max(90, 'Maksymalny interwał to 90 dni')
     .default(7),
+  calendarShowGoogleEvents: z.boolean().optional(),
+  calendarShowStudyFlowTasks: z.boolean().optional(),
 });
 

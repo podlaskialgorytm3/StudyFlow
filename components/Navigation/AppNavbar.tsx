@@ -32,6 +32,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Role } from '@prisma/client';
@@ -127,6 +128,7 @@ export default function AppNavbar() {
 
   const navLinks = [
     { label: 'Dashboard', href: '/dashboard', icon: <GridViewIcon fontSize="small" /> },
+    { label: 'Kalendarz', href: '/calendar', icon: <CalendarMonthIcon fontSize="small" /> },
     { label: 'Zadania', href: '/tasks', icon: <FormatListBulletedIcon fontSize="small" /> },
     { label: 'Przedmioty', href: '/subjects', icon: <SchoolIcon fontSize="small" /> },
     { label: 'Ustawienia', href: '/settings', icon: <SettingsIcon fontSize="small" /> },
