@@ -41,15 +41,36 @@ interface SubjectWithCounts {
   };
 }
 
-const COLOR_PALETTE = [
-  '#2563eb', // Blue
-  '#7c3aed', // Purple
-  '#059669', // Emerald
-  '#d97706', // Amber
-  '#dc2626', // Red
-  '#0891b2', // Cyan
-  '#db2777', // Pink
-  '#4f46e5', // Indigo
+export const COLOR_PALETTE = [
+  // Niebieskie & Cyjan
+  { hex: '#2563eb', label: 'Klasyczny błękit' },
+  { hex: '#0284c7', label: 'Morski' },
+  { hex: '#0891b2', label: 'Cyjan' },
+  { hex: '#06b6d4', label: 'Lazurowy' },
+
+  // Fiolety & Indygo
+  { hex: '#4f46e5', label: 'Indygo' },
+  { hex: '#7c3aed', label: 'Fiolet' },
+  { hex: '#9333ea', label: 'Purpura' },
+  { hex: '#c026d3', label: 'Fuksja' },
+
+  // Zielenie & Mięta
+  { hex: '#059669', label: 'Szmaragd' },
+  { hex: '#16a34a', label: 'Zieleń leśna' },
+  { hex: '#65a30d', label: 'Limonka' },
+  { hex: '#0d9488', label: 'Ciemny turkus' },
+
+  // Ciepłe (Żółte, Pomarańcze, Czerwienie)
+  { hex: '#d97706', label: 'Bursztyn' },
+  { hex: '#ea580c', label: 'Pomarańcz' },
+  { hex: '#dc2626', label: 'Czerwień' },
+  { hex: '#e11d48', label: 'Koralowy' },
+
+  // Róż & Pastele & Neutralne
+  { hex: '#db2777', label: 'Róż' },
+  { hex: '#475569', label: 'Stalowy' },
+  { hex: '#0f766e', label: 'Morska zieleń' },
+  { hex: '#78350f', label: 'Karmel' },
 ];
 
 export default function SubjectsPage() {
