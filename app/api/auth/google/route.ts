@@ -43,3 +43,4 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL('/settings?google_error=unknown', req.url));
   }
 }
+

@@ -52,3 +52,4 @@ export function decryptToken(encryptedData: string): string {
 
   return decrypted;
 }
+

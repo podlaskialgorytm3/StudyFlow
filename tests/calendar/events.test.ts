@@ -170,3 +170,4 @@ describe('Calendar Event and Task Unified Integration', () => {
     expect(filtered[0].title).toBe('W przedziale');
   });
 });
+

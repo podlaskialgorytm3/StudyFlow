@@ -34,3 +34,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Błąd serwera podczas synchronizacji: ${msg}` }, { status: 500 });
   }
 }
+

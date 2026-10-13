@@ -107,6 +107,42 @@ Każdy student może spersonalizować algorytmy aplikacji pod swój styl nauki:
 
 ---
 
+---
+
+### 📅 I. Kalendarz tygodniowy i integracja z Google Calendar (`/calendar`, `/settings`)
+Aplikacja udostępnia interaktywny kalendarz akademicki łączący wydarzenia z Google Calendar oraz zadania StudyFlow w jednym spójnym widoku:
+- **Widok tygodniowy i dzienny (`/calendar`):**
+  - Siatka 24-godzinna (od 00:00 do 23:00) z precyzyjnym pozycjonowaniem bloków na podstawie czasu rozpoczęcia i zakończenia.
+  - Pasek wydarzeń całodniowych (*All-Day*).
+  - Czerwona linia bieżącego czasu w aktualnym dniu.
+  - Nawigacja między tygodniami / dniami, przycisk *„Dzisiaj”*.
+  - Okno modalne ze szczegółami wydarzenia (tytuł, godziny, opis, lokalizacja, link do Google Calendar lub przejście do zadania StudyFlow).
+  - Responsywny design na desktop, tablet i urządzenia mobilne.
+- **Unifikacja wydarzeń i zadań StudyFlow:**
+  - Zadania ze StudyFlow posiadające termin oddania (`dueDate`) są wizualizowane na osi czasu na podstawie oszacowanego czasu trwania (`estimatedMinutes`, domyślnie 60 minut przed terminem).
+  - Kolorystyka: wydarzenia z Google Calendar wyróżnione są kolorem niebieskim (#4285F4), a zadania StudyFlow dziedziczą kolor przypisanego przedmiotu.
+  - Filtry widoczności: niezależne włączanie/wyłączanie wydarzeń Google oraz zadań StudyFlow.
+- **Bezpieczna integracja OAuth 2.0:**
+  - Wykorzystanie oficjalnej biblioteki `googleapis`.
+  - Zakres uprawnień ograniczony wyłącznie do odczytu: `https://www.googleapis.com/auth/calendar.events.readonly` oraz `calendar.readonly`.
+  - Zabezpieczenie procesu autoryzacji tokenem CSRF (`state`) weryfikowanym w bezpiecznym ciasteczku `HttpOnly`.
+  - Szyfrowanie tokenów OAuth (`access_token`, `refresh_token`) algorytmem **AES-256-GCM** przed zapisem w bazie PostgreSQL. Tokeny nigdy nie trafiają do przeglądarki klienta.
+  - Automatyczne odświeżanie tokenów dostępu za pomocą `refresh_token`.
+- **Silnik synchronizacji danych (`lib/google/syncService.ts`):**
+  - Przycisk *„Synchronizuj teraz”* w ustawieniach i na ekranie kalendarza.
+  - Leniwa synchronizacja w tle przy otwarciu kalendarza, gdy dane są starsze niż zdefiniowana częstotliwość.
+  - Przyrostowa synchronizacja za pomocą `syncToken` — pobierane są tylko nowe, zmodyfikowane lub usunięte wydarzenia.
+  - Automatyczna obsługa błędu Google API 410 (unieważniony `syncToken`) z bezpiecznym powrotem do pełnej synchronizacji.
+  - Ochrona przed współbieżnością i blokada przed duplikowaniem wydarzeń na poziomie unikalnych indeksów bazy `[userId, googleEventId]`.
+  - Endpoint cyklicznej synchronizacji serwerowej `/api/calendar/sync/cron` zabezpieczony kluczem `CRON_SECRET`.
+- **Ustawienia Google Calendar (`/settings`):**
+  - Połączenie i bezpieczne odłączenie konta Google (z wycofaniem tokenu w Google OAuth i kaskadowym usunięciem pobranych wydarzeń).
+  - Wybór docelowego kalendarza Google z listy kalendarzy użytkownika.
+  - Wybór częstotliwości synchronizacji (1, 3 lub 6 godzin).
+  - Przełączniki widoczności wydarzeń Google i zadań StudyFlow zapisywane trwale w profilu studenta.
+
+---
+
 ## 3. Zestawienie Technologiczne
 
 | Warstwa / Obszar | Wykorzystana technologia |
@@ -114,9 +150,35 @@ Każdy student może spersonalizować algorytmy aplikacji pod swój styl nauki:
 | **Framework Fullstack** | Next.js 14 (App Router) |
 | **Język programowania** | TypeScript (tryb `strict`) |
 | **Interfejs użytkownika** | Material UI (MUI v5), Emotion, Material Icons |
+| **Integracja zewnętrzna** | Google Calendar API (`googleapis`) |
+| **Kryptografia** | AES-256-GCM (Node.js `crypto`), `bcryptjs`, JWT (`jose`) |
 | **Baza danych** | PostgreSQL |
 | **ORM** | Prisma ORM |
 | **Walidacja danych** | Zod |
 | **Autoryzacja & Sesje** | JWT (`jose`), ciasteczka `HttpOnly`, `bcryptjs` |
-| **Testy jednostkowe** | Vitest |
+| **Testy jednostkowe** | Vitest (55 testów obejmujących szyfrowanie, OAuth, synchronizację, domenę i dostęp) |
+
+---
+
+## 4. Konfiguracja Google Cloud Platform (Krok po kroku)
+
+Aby włączyć synchronizację z Google Calendar w aplikacji StudyFlow:
+1. Przejdź do [Google Cloud Console](https://console.cloud.google.com/) i utwórz nowy projekt (lub wybierz istniejący).
+2. W sekcji **APIs & Services** $\rightarrow$ **Library** wyszukaj **Google Calendar API** i kliknij **Enable**.
+3. Przejdź do **APIs & Services** $\rightarrow$ **OAuth consent screen**:
+   - Wybierz typ: *External* (lub *Internal* w ramach Google Workspace).
+   - Wypełnij nazwę aplikacji: *StudyFlow*, adres email wsparcia i kontakt programisty.
+   - W sekcji **Scopes** dodaj:
+     - `https://www.googleapis.com/auth/calendar.events.readonly`
+     - `https://www.googleapis.com/auth/calendar.readonly`
+     - `https://www.googleapis.com/auth/userinfo.email`
+   - W trybie testowym (*Testing*) dodaj swoje konto Google do listy **Test users**.
+4. Przejdź do **APIs & Services** $\rightarrow$ **Credentials** $\rightarrow$ **Create Credentials** $\rightarrow$ **OAuth client ID**:
+   - Application type: **Web application**.
+   - Name: *StudyFlow Web Client*.
+   - **Authorized redirect URIs**: dodaj adres:
+     `http://localhost:3000/api/auth/google/callback`
+     *(oraz dla domeny produkcyjnej, np. `https://twojadomena.pl/api/auth/google/callback`)*.
+5. Skopiuj wygenerowane **Client ID** oraz **Client Secret** do pliku `.env`.
+
 

@@ -61,3 +61,4 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${appBaseUrl}/settings?google_error=exchange_failed`);
   }
 }
+

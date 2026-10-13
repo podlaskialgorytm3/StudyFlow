@@ -767,3 +767,4 @@ export default function CalendarPage() {
     </Box>
   );
 }
+

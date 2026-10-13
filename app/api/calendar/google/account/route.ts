@@ -154,3 +154,4 @@ export async function DELETE() {
     return NextResponse.json({ error: `Błąd podczas odłączania konta: ${msg}` }, { status: 500 });
   }
 }
+

@@ -43,6 +43,13 @@ SESSION_SECRET="studyflow_super_secret_jwt_key_must_be_at_least_32_characters_lo
 ADMIN_USERNAME="admin"
 ADMIN_PASSWORD="AdminPassword123!"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Google Calendar OAuth 2.0 (Google Cloud Console)
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/google/callback"
+ENCRYPTION_KEY="studyflow_token_encryption_key_min_32_characters_long"
+CRON_SECRET="studyflow_cron_background_sync_secret_key"
 ```
 
 ### 3. Uruchomienie bazy danych PostgreSQL (Docker)
@@ -96,11 +103,16 @@ Aplikacja będzie dostępna pod adresem: [http://localhost:3000](http://localhos
   - Listą najbliższych terminów
   - Szybkim przyciskiem tworzenia zadań
 - `/tasks` — Pełna lista zadań z zaawansowanym filtrowaniem (przedmiot, kategoria, status, termin) i sortowaniem
+- `/calendar` — Interaktywny kalendarz tygodniowy i dzienny:
+  - Widok siatki 24h z oznaczeniem aktualnej godziny i paska całodniowego
+  - Zunifikowane wydarzenia z Google Calendar i zadania StudyFlow
+  - Niezależne filtry widoczności i modal ze szczegółami wydarzenia
+  - Przycisk szybkiej synchronizacji „Synchronizuj teraz”
 - `/subjects` — Zarządzanie przedmiotami (tworzenie, paleta kolorów, opisy, kaskadowe usuwanie z potwierdzeniem)
 - `/subjects/[id]` — Szczegóły przedmiotu, zarządzanie jego kategoriami oraz przypisanymi zadaniami
-- `/settings` — Personalizacja progów macierzy:
-  - Próg ważności: Story Points (1–10)
-  - Próg pilności: Liczba dni do terminu (≥ 0)
+- `/settings` — Ustawienia studenta:
+  - Personalizacja progów macierzy Eisenhowera (Story Points, liczba dni)
+  - Integracja Google Calendar: łączenie/odłączanie konta, wybór kalendarza, częstotliwość synchronizacji (1h, 3h, 6h), przełączniki widoczności
 - `/admin` — Panel administracyjny dostępny wyłącznie dla roli `ADMIN` (zarządzanie kontami studentów z poszanowaniem prywatności treści zadań)
 
 ---

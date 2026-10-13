@@ -56,3 +56,4 @@ async function handleCron(req: Request) {
     results,
   });
 }
+

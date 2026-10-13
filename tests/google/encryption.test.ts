@@ -59,3 +59,4 @@ describe('OAuth Token Encryption (AES-256-GCM)', () => {
     expect(() => decryptToken('part1:part2:part3:part4')).toThrow('Invalid encrypted token format');
   });
 });
+
