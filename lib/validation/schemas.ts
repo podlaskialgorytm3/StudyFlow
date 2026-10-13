@@ -60,6 +60,11 @@ export const taskSchema = z.object({
   priorityOverride: z.nativeEnum(PriorityOverride).optional().nullable(),
   urgencyOverride: z.nativeEnum(UrgencyOverride).optional().nullable(),
   timeSpentSeconds: z.number().int().min(0).default(0),
+  estimatedMinutes: z
+    .number()
+    .int('Szacowany czas musi być liczbą całkowitą')
+    .min(0, 'Szacowany czas nie może być ujemny')
+    .default(60),
 });
 
 export const taskUpdateSchema = taskSchema.partial();
