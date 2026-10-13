@@ -19,10 +19,13 @@ import {
   Alert,
   CircularProgress,
   Chip,
+  Tooltip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CheckIcon from '@mui/icons-material/Check';
+import PaletteIcon from '@mui/icons-material/Palette';
 import SchoolIcon from '@mui/icons-material/School';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Link from 'next/link';
@@ -361,27 +364,114 @@ export default function SubjectsPage() {
                 placeholder="np. Architektura Komputerów"
               />
 
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Wybierz kolor przedmiotu:
-                </Typography>
-                <Stack direction="row" spacing={1.5} flexWrap="wrap">
-                  {COLOR_PALETTE.map((c) => (
+              {/* Color Palette Selector */}
+              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <PaletteIcon fontSize="small" color="primary" />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      Paleta barw przedmiotu
+                    </Typography>
+                  </Stack>
+
+                  {/* Active Selected Color Preview */}
+                  <Stack direction="row" spacing={1} alignItems="center">
                     <Box
-                      key={c}
-                      onClick={() => setColor(c)}
                       sx={{
-                        width: 32,
-                        height: 32,
+                        width: 18,
+                        height: 18,
                         borderRadius: '50%',
-                        bgcolor: c,
-                        cursor: 'pointer',
-                        border: color === c ? '3px solid #000' : '2px solid transparent',
-                        transform: color === c ? 'scale(1.15)' : 'none',
-                        transition: 'all 0.1s ease',
+                        bgcolor: color,
+                        border: '1px solid rgba(0,0,0,0.1)',
                       }}
                     />
-                  ))}
+                    <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                      {color}
+                    </Typography>
+                  </Stack>
+                </Stack>
+
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                  Wybierz jeden z gotowych odcieni lub wpisz własny kod koloru HEX:
+                </Typography>
+
+                {/* Swatches Grid */}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: 'repeat(5, 1fr)', sm: 'repeat(10, 1fr)' },
+                    gap: 1.25,
+                    mb: 2,
+                  }}
+                >
+                  {COLOR_PALETTE.map((c) => {
+                    const isSelected = color.toLowerCase() === c.hex.toLowerCase();
+                    return (
+                      <Tooltip key={c.hex} title={`${c.label} (${c.hex})`} arrow>
+                        <Box
+                          onClick={() => setColor(c.hex)}
+                          sx={{
+                            aspectRatio: '1',
+                            borderRadius: '50%',
+                            bgcolor: c.hex,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease',
+                            border: isSelected ? '3px solid #0f172a' : '2px solid rgba(255,255,255,0.8)',
+                            boxShadow: isSelected
+                              ? `0 0 0 2px ${c.hex}, 0 4px 10px rgba(0,0,0,0.2)`
+                              : '0 1px 3px rgba(0,0,0,0.12)',
+                            transform: isSelected ? 'scale(1.15)' : 'none',
+                            '&:hover': {
+                              transform: 'scale(1.15)',
+                              boxShadow: '0 3px 8px rgba(0,0,0,0.18)',
+                            },
+                          }}
+                        >
+                          {isSelected && <CheckIcon sx={{ color: '#fff', fontSize: 16, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }} />}
+                        </Box>
+                      </Tooltip>
+                    );
+                  })}
+                </Box>
+
+                {/* Custom Color Input & Native Color Picker */}
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Box
+                    component="input"
+                    type="color"
+                    value={color.startsWith('#') && color.length === 7 ? color : '#2563eb'}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setColor(e.target.value)}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      p: 0,
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 1.5,
+                      cursor: 'pointer',
+                      bgcolor: 'transparent',
+                      '&::-webkit-color-swatch-wrapper': { p: 0.5 },
+                      '&::-webkit-color-swatch': { borderRadius: 1, border: 'none' },
+                    }}
+                    title="Wybierz dowolny kolor za pomocą próbnika"
+                  />
+                  <TextField
+                    size="small"
+                    label="Własny kod HEX"
+                    placeholder="#2563eb"
+                    value={color}
+                    onChange={(e) => {
+                      const val = e.target.value.trim();
+                      setColor(val);
+                    }}
+                    inputProps={{ maxLength: 7 }}
+                    sx={{ width: 160 }}
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    Możesz też wybrać dowolny odcień z koła barw obok.
+                  </Typography>
                 </Stack>
               </Box>
 
