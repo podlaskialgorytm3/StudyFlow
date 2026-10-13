@@ -109,6 +109,7 @@ model Task {
   updatedAt        DateTime          @updatedAt
   completedAt      DateTime?
   timeSpentSeconds Int               @default(0)
+  estimatedMinutes Int               @default(60)
 
   timeEntries      TaskTimeEntry[]
 
