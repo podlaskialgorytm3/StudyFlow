@@ -311,41 +311,77 @@ export default function TaskTimeTracker({
     <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
       <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
         {/* Header */}
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5} sx={{ mb: 2 }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+          spacing={2}
+          sx={{ mb: 2.5 }}
+        >
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <AccessTimeIcon color="primary" />
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                bgcolor: 'primary.50',
+                color: 'primary.main',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <AccessTimeIcon fontSize="small" />
+            </Box>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
                 Pomiar czasu zadania
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Opcjonalny stoper do śledzenia i zapisywania czasu poświęconego na to zadanie.
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                Stoper do śledzenia i zapisywania sesji nauki
               </Typography>
             </Box>
           </Stack>
 
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="center" flexShrink={0} sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Button
               size="small"
               variant="outlined"
-              startIcon={<FullscreenIcon />}
+              color="inherit"
+              startIcon={<FullscreenIcon fontSize="small" />}
               onClick={handleToggleFullscreen}
-              sx={{ fontWeight: 600 }}
+              sx={{
+                whiteSpace: 'nowrap',
+                fontWeight: 600,
+                borderColor: '#cbd5e1',
+                color: 'text.primary',
+                px: 1.5,
+                py: 0.75,
+                '&:hover': { borderColor: '#94a3b8', bgcolor: '#f8fafc' },
+              }}
             >
               Pełny ekran
             </Button>
             <Button
               size="small"
               variant="outlined"
-              startIcon={<MoreTimeIcon />}
+              color="primary"
+              startIcon={<MoreTimeIcon fontSize="small" />}
               onClick={() => setManualDialogOpen(true)}
+              sx={{
+                whiteSpace: 'nowrap',
+                fontWeight: 600,
+                px: 1.5,
+                py: 0.75,
+              }}
             >
               Odnotuj czas ręcznie
             </Button>
           </Stack>
         </Stack>
 
-        <Divider sx={{ mb: 3 }} />
+        <Divider sx={{ mb: 2.5 }} />
 
         {/* Alerts */}
         {error && (
