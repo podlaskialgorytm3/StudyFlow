@@ -32,6 +32,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AddTaskIcon from '@mui/icons-material/AddTask';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import MoreTimeIcon from '@mui/icons-material/MoreTime';
 import HistoryIcon from '@mui/icons-material/History';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
