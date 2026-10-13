@@ -19,6 +19,9 @@ export async function GET(_req: Request, { params }: RouteParams) {
     include: {
       subject: true,
       category: true,
+      timeEntries: {
+        orderBy: { createdAt: 'desc' },
+      },
     },
   });
 
@@ -107,6 +110,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         ...(data.status !== undefined ? { status: data.status, completedAt } : {}),
         ...(data.priorityOverride !== undefined ? { priorityOverride: data.priorityOverride } : {}),
         ...(data.urgencyOverride !== undefined ? { urgencyOverride: data.urgencyOverride } : {}),
+        ...(data.timeSpentSeconds !== undefined ? { timeSpentSeconds: data.timeSpentSeconds } : {}),
       },
       include: {
         subject: {
@@ -121,6 +125,9 @@ export async function PATCH(req: Request, { params }: RouteParams) {
             id: true,
             name: true,
           },
+        },
+        timeEntries: {
+          orderBy: { createdAt: 'desc' },
         },
       },
     });

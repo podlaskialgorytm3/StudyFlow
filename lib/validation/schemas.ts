@@ -59,9 +59,15 @@ export const taskSchema = z.object({
   status: z.nativeEnum(TaskStatus).default(TaskStatus.NEW),
   priorityOverride: z.nativeEnum(PriorityOverride).optional().nullable(),
   urgencyOverride: z.nativeEnum(UrgencyOverride).optional().nullable(),
+  timeSpentSeconds: z.number().int().min(0).default(0),
 });
 
 export const taskUpdateSchema = taskSchema.partial();
+
+export const taskTimeEntrySchema = z.object({
+  durationSeconds: z.number().int('Czas musi być liczbą całkowitą').min(1, 'Czas musi wynosić co najmniej 1 sekundę'),
+  note: z.string().trim().max(300, 'Notatka może mieć maksymalnie 300 znaków').optional().nullable(),
+});
 
 export const settingsSchema = z.object({
   importantStoryPointsThreshold: z
