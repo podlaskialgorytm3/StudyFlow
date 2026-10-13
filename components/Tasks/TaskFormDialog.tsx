@@ -45,6 +45,7 @@ export interface TaskItem {
   completedAt?: string | null;
   createdAt?: string | null;
   timeSpentSeconds?: number;
+  estimatedMinutes?: number;
   subject?: { id: string; name: string; color?: string | null };
   category?: { id: string; name: string } | null;
 }
@@ -76,6 +77,8 @@ export default function TaskFormDialog({
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.NEW);
   const [priorityOverride, setPriorityOverride] = useState<string>('AUTO');
   const [urgencyOverride, setUrgencyOverride] = useState<string>('AUTO');
+  const [estimatedHours, setEstimatedHours] = useState<number>(1);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +105,9 @@ export default function TaskFormDialog({
       setStatus(initialTask.status);
       setPriorityOverride(initialTask.priorityOverride || 'AUTO');
       setUrgencyOverride(initialTask.urgencyOverride || 'AUTO');
+      const totalEst = initialTask.estimatedMinutes !== undefined && initialTask.estimatedMinutes !== null ? initialTask.estimatedMinutes : 60;
+      setEstimatedHours(Math.floor(totalEst / 60));
+      setEstimatedMinutes(totalEst % 60);
     } else {
       setTitle('');
       setDescription('');
@@ -117,6 +123,8 @@ export default function TaskFormDialog({
       setStatus(initialStatus || TaskStatus.NEW);
       setPriorityOverride('AUTO');
       setUrgencyOverride('AUTO');
+      setEstimatedHours(1);
+      setEstimatedMinutes(0);
     }
     setError(null);
   }, [initialTask, initialStatus, open, subjects]);
@@ -135,6 +143,8 @@ export default function TaskFormDialog({
       return;
     }
 
+    const calcEstimatedMinutes = Math.max(0, (estimatedHours * 60) + estimatedMinutes);
+
     setLoading(true);
     setError(null);
 
@@ -148,6 +158,7 @@ export default function TaskFormDialog({
       status,
       priorityOverride: priorityOverride === 'AUTO' ? null : priorityOverride,
       urgencyOverride: urgencyOverride === 'AUTO' ? null : urgencyOverride,
+      estimatedMinutes: calcEstimatedMinutes,
     };
 
     try {
@@ -269,6 +280,44 @@ export default function TaskFormDialog({
                 marks
                 valueLabelDisplay="auto"
               />
+            </Box>
+
+            {/* Estimated Time (Hours & Minutes) */}
+            <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  Szacowany czas wykonania (Estymacja)
+                </Typography>
+                <Typography variant="body2" color="primary" sx={{ fontWeight: 700 }}>
+                  {estimatedHours > 0 ? `${estimatedHours} godz. ` : ''}{estimatedMinutes} min
+                </Typography>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                Określ orientacyjną liczbę godzin i minut potrzebnych do zrealizowania zadania.
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <TextField
+                  label="Godziny"
+                  type="number"
+                  fullWidth
+                  value={estimatedHours}
+                  onChange={(e) => setEstimatedHours(Math.max(0, parseInt(e.target.value) || 0))}
+                  inputProps={{ min: 0, max: 999 }}
+                  size="small"
+                />
+                <TextField
+                  label="Minuty"
+                  type="number"
+                  fullWidth
+                  value={estimatedMinutes}
+                  onChange={(e) => {
+                    const val = Math.max(0, parseInt(e.target.value) || 0);
+                    setEstimatedMinutes(Math.min(59, val));
+                  }}
+                  inputProps={{ min: 0, max: 59 }}
+                  size="small"
+                />
+              </Stack>
             </Box>
 
             {/* Due Date */}

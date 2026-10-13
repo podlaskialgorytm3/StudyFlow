@@ -89,6 +89,7 @@ export async function POST(req: Request) {
       status,
       priorityOverride,
       urgencyOverride,
+      estimatedMinutes,
     } = parsed.data;
 
     // 1. Check subject ownership
@@ -130,6 +131,7 @@ export async function POST(req: Request) {
         completedAt: status === TaskStatus.DONE ? new Date() : null,
         priorityOverride: priorityOverride || null,
         urgencyOverride: urgencyOverride || null,
+        estimatedMinutes: estimatedMinutes ?? 60,
       },
       include: {
         subject: {

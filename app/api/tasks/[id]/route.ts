@@ -111,6 +111,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         ...(data.priorityOverride !== undefined ? { priorityOverride: data.priorityOverride } : {}),
         ...(data.urgencyOverride !== undefined ? { urgencyOverride: data.urgencyOverride } : {}),
         ...(data.timeSpentSeconds !== undefined ? { timeSpentSeconds: data.timeSpentSeconds } : {}),
+        ...(data.estimatedMinutes !== undefined ? { estimatedMinutes: data.estimatedMinutes } : {}),
       },
       include: {
         subject: {
