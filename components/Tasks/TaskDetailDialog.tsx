@@ -371,45 +371,70 @@ export default function TaskDetailDialog({
             </Stack>
           </Box>
 
-          {/* Due date info */}
+          {/* Due date and start date info */}
           <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-              Termin i czas:
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              Terminy i harmonogram:
             </Typography>
-            {task.dueDate ? (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                  {new Date(task.dueDate).toLocaleDateString('pl-PL', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+            <Stack spacing={1}>
+              {task.startDate && (
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
+                    Rozpoczęcie:
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {new Date(task.startDate).toLocaleString('pl-PL', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Typography>
+                </Stack>
+              )}
+
+              {task.dueDate ? (
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
+                    Termin oddania:
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {new Date(task.dueDate).toLocaleString('pl-PL', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Typography>
+                  {classification.daysRemaining !== null && (
+                    <Chip
+                      size="small"
+                      label={
+                        classification.isOverdue
+                          ? `${Math.abs(classification.daysRemaining)} dni po terminie`
+                          : classification.isDueToday
+                          ? 'Dzisiaj!'
+                          : `Za ${classification.daysRemaining} dni`
+                      }
+                      color={classification.isOverdue ? 'error' : classification.isDueToday ? 'warning' : 'default'}
+                      sx={{ fontWeight: 700 }}
+                    />
+                  )}
+                </Stack>
+              ) : !task.startDate ? (
+                <Typography variant="body2" color="text.secondary">
+                  Bez ustalonego terminu
                 </Typography>
-                {classification.daysRemaining !== null && (
-                  <Chip
-                    size="small"
-                    label={
-                      classification.isOverdue
-                        ? `${Math.abs(classification.daysRemaining)} dni po terminie`
-                        : classification.isDueToday
-                        ? 'Dzisiaj!'
-                        : `Za ${classification.daysRemaining} dni`
-                    }
-                    color={classification.isOverdue ? 'error' : classification.isDueToday ? 'warning' : 'default'}
-                    sx={{ fontWeight: 700 }}
-                  />
-                )}
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Bez ustalonego terminu
-              </Typography>
-            )}
+              ) : null}
+            </Stack>
           </Box>
 
           {/* Google Calendar sync status and push button */}
-          {task.dueDate && (
+          {(task.dueDate || task.startDate) && (
             <Box
               sx={{
                 p: 2,

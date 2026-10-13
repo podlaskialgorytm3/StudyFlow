@@ -37,6 +37,7 @@ export interface TaskItem {
   categoryId?: string | null;
   title: string;
   description?: string | null;
+  startDate?: string | null;
   dueDate?: string | null;
   storyPoints: number;
   status: TaskStatus;
@@ -62,6 +63,19 @@ interface TaskFormDialogProps {
   subjects: SubjectItem[];
 }
 
+function toDatetimeLocalString(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const h = pad(d.getHours());
+  const min = pad(d.getMinutes());
+  return `${y}-${m}-${day}T${h}:${min}`;
+}
+
 export default function TaskFormDialog({
   open,
   onClose,
@@ -74,6 +88,7 @@ export default function TaskFormDialog({
   const [description, setDescription] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
+  const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [hasDueDate, setHasDueDate] = useState(true);
   const [storyPoints, setStoryPoints] = useState<number>(3);
@@ -93,14 +108,10 @@ export default function TaskFormDialog({
       setDescription(initialTask.description || '');
       setSubjectId(initialTask.subjectId);
       setCategoryId(initialTask.categoryId || '');
+      setStartDate(toDatetimeLocalString(initialTask.startDate));
       if (initialTask.dueDate) {
         setHasDueDate(true);
-        // Format as YYYY-MM-DD
-        const d = new Date(initialTask.dueDate);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        setDueDate(`${y}-${m}-${day}`);
+        setDueDate(toDatetimeLocalString(initialTask.dueDate));
       } else {
         setHasDueDate(false);
         setDueDate('');
@@ -119,10 +130,11 @@ export default function TaskFormDialog({
       setSubjectId(subjects.length > 0 ? subjects[0].id : '');
       setCategoryId('');
       const today = new Date();
-      const y = today.getFullYear();
-      const m = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      setDueDate(`${y}-${m}-${day}`);
+      today.setMinutes(0, 0, 0);
+      today.setHours(today.getHours() + 1);
+      const end = new Date(today.getTime() + 60 * 60 * 1000);
+      setStartDate(toDatetimeLocalString(today.toISOString()));
+      setDueDate(toDatetimeLocalString(end.toISOString()));
       setHasDueDate(true);
       setStoryPoints(3);
       setStatus(initialStatus || TaskStatus.NEW);
@@ -159,6 +171,7 @@ export default function TaskFormDialog({
       description: description.trim() || null,
       subjectId,
       categoryId: categoryId ? categoryId : null,
+      startDate: hasDueDate && startDate ? new Date(startDate).toISOString() : null,
       dueDate: hasDueDate && dueDate ? new Date(dueDate).toISOString() : null,
       storyPoints,
       status,
@@ -371,29 +384,42 @@ export default function TaskFormDialog({
               />
             </Box>
 
-            {/* Due Date */}
+            {/* Start and Due Date */}
             <Box>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Termin oddania
+                  Terminy i czas w kalendarzu
                 </Typography>
                 <Button
                   size="small"
                   variant="text"
                   onClick={() => setHasDueDate(!hasDueDate)}
                 >
-                  {hasDueDate ? 'Usuń termin (bez terminu)' : 'Ustaw termin'}
+                  {hasDueDate ? 'Usuń terminy (bez terminu)' : 'Ustaw terminy'}
                 </Button>
               </Stack>
 
               {hasDueDate ? (
-                <TextField
-                  type="date"
-                  fullWidth
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <TextField
+                    label="Data i godzina rozpoczęcia"
+                    type="datetime-local"
+                    fullWidth
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    helperText="Początek pracy nad zadaniem"
+                  />
+                  <TextField
+                    label="Termin zakończenia (deadline)"
+                    type="datetime-local"
+                    fullWidth
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    helperText="Wymagany do klasyfikacji w macierzy"
+                  />
+                </Stack>
               ) : (
                 <Alert severity="info" variant="outlined">
                   Zadanie bez terminu nie jest uznawane za pilne w macierzy Eisenhowera.

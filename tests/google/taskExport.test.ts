@@ -36,11 +36,12 @@ describe('Google Calendar Task Export Service', () => {
     expect(result.code).toBe('TASK_NOT_FOUND');
   });
 
-  it('fails when task has no dueDate', async () => {
+  it('fails when task has no startDate and no dueDate', async () => {
     vi.mocked(prisma.task.findUnique).mockResolvedValue({
       id: taskId,
       ownerId: userId,
       title: 'Zadanie bez terminu',
+      startDate: null,
       dueDate: null,
       subject: { name: 'Matematyka', color: '#1976d2' },
     } as any);
@@ -48,7 +49,7 @@ describe('Google Calendar Task Export Service', () => {
     const result = await pushTaskToGoogleCalendar(userId, taskId);
     expect(result.success).toBe(false);
     expect(result.code).toBe('NO_DUE_DATE');
-    expect(result.error).toContain('musi mieć określony termin');
+    expect(result.error).toContain('datę rozpoczęcia lub termin');
   });
 
   it('fails with INSUFFICIENT_SCOPES when token was authorized only with readonly scope', async () => {
