@@ -21,6 +21,9 @@ import {
   InputLabel,
   Switch,
   FormControlLabel,
+  Collapse,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import TuneIcon from '@mui/icons-material/Tune';
@@ -31,6 +34,13 @@ import SyncIcon from '@mui/icons-material/Sync';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import AppNavbar from '@/components/Navigation/AppNavbar';
 
 export default function SettingsPage() {
@@ -63,15 +73,45 @@ export default function SettingsPage() {
   const [googleSyncing, setGoogleSyncing] = useState(false);
   const [googleMsg, setGoogleMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Custom Google OAuth Credentials in DB
+  const [hasCustomCredentials, setHasCustomCredentials] = useState(false);
+  const [maskedClientId, setMaskedClientId] = useState<string | null>(null);
+  const [customClientId, setCustomClientId] = useState('');
+  const [customClientSecret, setCustomClientSecret] = useState('');
+  const [showClientSecret, setShowClientSecret] = useState(false);
+  const [showCredentialsForm, setShowCredentialsForm] = useState(false);
+  const [savingCredentials, setSavingCredentials] = useState(false);
+  const [deletingCredentials, setDeletingCredentials] = useState(false);
+  const [credentialsMsg, setCredentialsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [redirectUri, setRedirectUri] = useState('');
+  const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
+
   const fetchGoogleData = async () => {
     try {
-      const gRes = await fetch('/api/calendar/google/account');
+      const [gRes, credsRes] = await Promise.all([
+        fetch('/api/calendar/google/account'),
+        fetch('/api/calendar/google/credentials'),
+      ]);
+
       if (gRes.ok) {
         const gData = await gRes.json();
         setGoogleConnected(gData.connected);
         setGoogleConfigured(gData.isConfigured);
+        setHasCustomCredentials(Boolean(gData.hasCustomCredentials));
         setGoogleAccount(gData.account);
         setGoogleCalendars(gData.calendars || []);
+        if (gData.redirectUri) {
+          setRedirectUri(gData.redirectUri);
+        }
+      }
+
+      if (credsRes.ok) {
+        const cData = await credsRes.json();
+        setHasCustomCredentials(Boolean(cData.hasCustomKeys));
+        setMaskedClientId(cData.clientIdMasked);
+        if (cData.redirectUri) {
+          setRedirectUri(cData.redirectUri);
+        }
       }
     } catch {
       // ignore
@@ -162,6 +202,81 @@ export default function SettingsPage() {
       }
     } catch {
       setGoogleMsg({ type: 'error', text: 'Błąd połączenia' });
+    }
+  };
+
+  const handleSaveCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customClientId.trim() || !customClientSecret.trim()) {
+      setCredentialsMsg({ type: 'error', text: 'Wprowadź zarówno Client ID, jak i Client Secret' });
+      return;
+    }
+    setSavingCredentials(true);
+    setCredentialsMsg(null);
+    try {
+      const res = await fetch('/api/calendar/google/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: customClientId.trim(),
+          clientSecret: customClientSecret.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCredentialsMsg({
+          type: 'success',
+          text: 'Klucze Google API zostały pomyślnie zaszyfrowane w bazie danych (AES-256-GCM) i zapisane!',
+        });
+        setCustomClientId('');
+        setCustomClientSecret('');
+        setShowCredentialsForm(false);
+        await fetchGoogleData();
+      } else {
+        setCredentialsMsg({ type: 'error', text: data.error || 'Błąd zapisu kluczy' });
+      }
+    } catch {
+      setCredentialsMsg({ type: 'error', text: 'Błąd połączenia z serwerem' });
+    } finally {
+      setSavingCredentials(false);
+    }
+  };
+
+  const handleDeleteCredentials = async () => {
+    if (
+      !window.confirm(
+        'Czy na pewno chcesz usunąć zapisane klucze Google API z bazy danych? Jeśli Twoje konto jest połączone, automatyczna synchronizacja może przestać działać.'
+      )
+    )
+      return;
+    setDeletingCredentials(true);
+    setCredentialsMsg(null);
+    try {
+      const res = await fetch('/api/calendar/google/credentials', { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        setCredentialsMsg({ type: 'success', text: 'Pomyślnie usunięto własne klucze Google API z bazy danych' });
+        await fetchGoogleData();
+      } else {
+        setCredentialsMsg({ type: 'error', text: data.error || 'Błąd usuwania kluczy' });
+      }
+    } catch {
+      setCredentialsMsg({ type: 'error', text: 'Błąd połączenia z serwerem' });
+    } finally {
+      setDeletingCredentials(false);
+    }
+  };
+
+  const handleCopyRedirectUri = () => {
+    const uri =
+      redirectUri ||
+      (typeof window !== 'undefined'
+        ? `${window.location.origin}/api/auth/google/callback`
+        : 'http://localhost:3000/api/auth/google/callback');
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(uri);
+      setCopiedRedirectUri(true);
+      setTimeout(() => setCopiedRedirectUri(false), 2000);
     }
   };
 
