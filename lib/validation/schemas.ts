@@ -65,6 +65,12 @@ export const taskSchema = z.object({
     .int('Szacowany czas musi być liczbą całkowitą')
     .min(0, 'Szacowany czas nie może być ujemny')
     .default(60),
+  progressPercent: z
+    .number()
+    .int('Procent postępu musi być liczbą całkowitą')
+    .min(0, 'Postęp nie może być mniejszy niż 0%')
+    .max(100, 'Postęp nie może być większy niż 100%')
+    .default(0),
 });
 
 export const taskUpdateSchema = taskSchema.partial();
@@ -72,6 +78,13 @@ export const taskUpdateSchema = taskSchema.partial();
 export const taskTimeEntrySchema = z.object({
   durationSeconds: z.number().int('Czas musi być liczbą całkowitą').min(1, 'Czas musi wynosić co najmniej 1 sekundę'),
   note: z.string().trim().max(300, 'Notatka może mieć maksymalnie 300 znaków').optional().nullable(),
+  progressPercent: z
+    .number()
+    .int('Procent postępu musi być liczbą całkowitą')
+    .min(0, 'Postęp nie może być mniejszy niż 0%')
+    .max(100, 'Postęp nie może być większy niż 100%')
+    .optional()
+    .nullable(),
 });
 
 export const settingsSchema = z.object({

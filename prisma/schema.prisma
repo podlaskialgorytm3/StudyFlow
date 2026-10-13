@@ -110,6 +110,7 @@ model Task {
   completedAt      DateTime?
   timeSpentSeconds Int               @default(0)
   estimatedMinutes Int               @default(60)
+  progressPercent  Int               @default(0)
 
   timeEntries      TaskTimeEntry[]
 
