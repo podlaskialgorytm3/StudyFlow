@@ -177,26 +177,26 @@ export default function TaskFormDialog({
     if (!isNaN(days) && days >= 0) {
       const targetDate = new Date();
       targetDate.setDate(targetDate.getDate() + days);
-      if (dueDate) {
-        const existing = new Date(dueDate);
-        if (!isNaN(existing.getTime())) {
-          targetDate.setHours(existing.getHours(), existing.getMinutes(), 0, 0);
-        } else {
-          targetDate.setHours(23, 59, 0, 0);
-        }
-      } else {
-        targetDate.setHours(23, 59, 0, 0);
-      }
+      // Domyślnie zawsze do północy (23:59)
+      targetDate.setHours(23, 59, 0, 0);
       setDueDate(toDatetimeLocalString(targetDate.toISOString()));
     }
   };
 
   const handleDueDateChange = (newVal: string) => {
-    setDueDate(newVal);
-    if (!newVal) {
+    let adjustedVal = newVal;
+    // Jeśli nie planujemy w kalendarzu, a użytkownik wybrał datę (lub przeglądarka ustawiła 00:00),
+    // domyślnie ustawiamy termin do północy (23:59)
+    if (!scheduleInCalendar && adjustedVal) {
+      if (adjustedVal.endsWith('T00:00')) {
+        adjustedVal = adjustedVal.replace('T00:00', 'T23:59');
+      }
+    }
+    setDueDate(adjustedVal);
+    if (!adjustedVal) {
       setDaysUntilDue('');
     } else {
-      const rem = getCalendarDaysRemaining(newVal);
+      const rem = getCalendarDaysRemaining(adjustedVal);
       setDaysUntilDue(rem !== null ? String(Math.max(0, rem)) : '');
     }
   };
@@ -234,6 +234,12 @@ export default function TaskFormDialog({
       }
     } else {
       setStartDate('');
+      // Po wyłączeniu kalendarza termin przechodzi na domyślny deadline do północy (23:59)
+      if (dueDate) {
+        const d = new Date(dueDate);
+        d.setHours(23, 59, 0, 0);
+        setDueDate(toDatetimeLocalString(d.toISOString()));
+      }
     }
   };
 
@@ -519,7 +525,7 @@ export default function TaskFormDialog({
                     InputLabelProps={{ shrink: true }}
                     helperText={
                       dueDate
-                        ? 'Wymagany do automatycznej klasyfikacji pilności w macierzy'
+                        ? 'Domyślnie termin do północy (23:59)'
                         : 'Domyślnie brak terminu (zadanie niepilne)'
                     }
                   />
