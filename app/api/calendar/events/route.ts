@@ -125,27 +125,16 @@ export async function GET(req: Request) {
     }
   }
 
-  // 4. Fetch StudyFlow tasks with due dates if enabled
+  // 4. Fetch StudyFlow tasks scheduled in calendar (only tasks with startDate)
   if (showTasks) {
     const tasks = await prisma.task.findMany({
       where: {
         ownerId: session.userId,
-        OR: [
-          {
-            dueDate: {
-              not: null,
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-          {
-            startDate: {
-              not: null,
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-        ],
+        startDate: {
+          not: null,
+          gte: startDate,
+          lte: endDate,
+        },
       },
       include: {
         subject: {
@@ -156,30 +145,17 @@ export async function GET(req: Request) {
           },
         },
       },
-      orderBy: { dueDate: 'asc' },
+      orderBy: { startDate: 'asc' },
     });
 
     for (const t of tasks) {
-      if (!t.dueDate && !t.startDate) continue;
+      if (!t.startDate) continue;
 
       const durationMs = (t.estimatedMinutes || 60) * 60 * 1000;
-      let start: Date;
-      let end: Date;
-
-      if (t.startDate && t.dueDate) {
-        start = new Date(t.startDate);
-        end = new Date(t.dueDate);
-        if (end.getTime() < start.getTime()) {
-          end = new Date(start.getTime() + durationMs);
-        }
-      } else if (t.startDate) {
-        start = new Date(t.startDate);
+      const start = new Date(t.startDate);
+      let end = t.dueDate ? new Date(t.dueDate) : new Date(start.getTime() + durationMs);
+      if (end.getTime() <= start.getTime()) {
         end = new Date(start.getTime() + durationMs);
-      } else if (t.dueDate) {
-        end = new Date(t.dueDate);
-        start = new Date(end.getTime() - durationMs);
-      } else {
-        continue;
       }
 
       items.push({

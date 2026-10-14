@@ -434,7 +434,7 @@ export default function TaskDetailDialog({
           </Box>
 
           {/* Google Calendar sync status and push button */}
-          {(task.dueDate || task.startDate) && (
+          {Boolean(task.startDate) && (
             <Box
               sx={{
                 p: 2,
