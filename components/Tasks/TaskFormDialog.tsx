@@ -21,8 +21,16 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Divider,
+  Grid,
+  InputAdornment,
+  Switch,
+  FormControlLabel,
+  Chip,
 } from '@mui/material';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import EventIcon from '@mui/icons-material/Event';
 import { TaskStatus, PriorityOverride, UrgencyOverride } from '@prisma/client';
+import { getCalendarDaysRemaining } from '@/lib/domain/eisenhower';
 
 export interface SubjectItem {
   id: string;
@@ -90,7 +98,8 @@ export default function TaskFormDialog({
   const [categoryId, setCategoryId] = useState<string>('');
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [hasDueDate, setHasDueDate] = useState(true);
+  const [daysUntilDue, setDaysUntilDue] = useState<string>('');
+  const [scheduleInCalendar, setScheduleInCalendar] = useState<boolean>(false);
   const [storyPoints, setStoryPoints] = useState<number>(3);
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.NEW);
   const [priorityOverride, setPriorityOverride] = useState<string>('AUTO');
@@ -108,14 +117,24 @@ export default function TaskFormDialog({
       setDescription(initialTask.description || '');
       setSubjectId(initialTask.subjectId);
       setCategoryId(initialTask.categoryId || '');
-      setStartDate(toDatetimeLocalString(initialTask.startDate));
-      if (initialTask.dueDate) {
-        setHasDueDate(true);
-        setDueDate(toDatetimeLocalString(initialTask.dueDate));
+      
+      if (initialTask.startDate) {
+        setStartDate(toDatetimeLocalString(initialTask.startDate));
+        setScheduleInCalendar(true);
       } else {
-        setHasDueDate(false);
-        setDueDate('');
+        setStartDate('');
+        setScheduleInCalendar(false);
       }
+
+      if (initialTask.dueDate) {
+        setDueDate(toDatetimeLocalString(initialTask.dueDate));
+        const rem = getCalendarDaysRemaining(initialTask.dueDate);
+        setDaysUntilDue(rem !== null ? String(Math.max(0, rem)) : '');
+      } else {
+        setDueDate('');
+        setDaysUntilDue('');
+      }
+
       setStoryPoints(initialTask.storyPoints);
       setStatus(initialTask.status);
       setPriorityOverride(initialTask.priorityOverride || 'AUTO');
@@ -125,17 +144,15 @@ export default function TaskFormDialog({
       setEstimatedMinutes(totalEst % 60);
       setProgressPercent(initialTask.progressPercent ?? (initialTask.status === TaskStatus.DONE ? 100 : 0));
     } else {
+      // Domyślnie dla każdego nowego zadania puste terminy
       setTitle('');
       setDescription('');
       setSubjectId(subjects.length > 0 ? subjects[0].id : '');
       setCategoryId('');
-      const today = new Date();
-      today.setMinutes(0, 0, 0);
-      today.setHours(today.getHours() + 1);
-      const end = new Date(today.getTime() + 60 * 60 * 1000);
-      setStartDate(toDatetimeLocalString(today.toISOString()));
-      setDueDate(toDatetimeLocalString(end.toISOString()));
-      setHasDueDate(true);
+      setStartDate('');
+      setDueDate('');
+      setDaysUntilDue('');
+      setScheduleInCalendar(false);
       setStoryPoints(3);
       setStatus(initialStatus || TaskStatus.NEW);
       setPriorityOverride('AUTO');
@@ -150,6 +167,76 @@ export default function TaskFormDialog({
   const selectedSubject = subjects.find((s) => s.id === subjectId);
   const availableCategories = selectedSubject?.categories || [];
 
+  const handleDaysUntilDueChange = (valStr: string) => {
+    setDaysUntilDue(valStr);
+    if (valStr.trim() === '') {
+      setDueDate('');
+      return;
+    }
+    const days = parseInt(valStr, 10);
+    if (!isNaN(days) && days >= 0) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + days);
+      if (dueDate) {
+        const existing = new Date(dueDate);
+        if (!isNaN(existing.getTime())) {
+          targetDate.setHours(existing.getHours(), existing.getMinutes(), 0, 0);
+        } else {
+          targetDate.setHours(23, 59, 0, 0);
+        }
+      } else {
+        targetDate.setHours(23, 59, 0, 0);
+      }
+      setDueDate(toDatetimeLocalString(targetDate.toISOString()));
+    }
+  };
+
+  const handleDueDateChange = (newVal: string) => {
+    setDueDate(newVal);
+    if (!newVal) {
+      setDaysUntilDue('');
+    } else {
+      const rem = getCalendarDaysRemaining(newVal);
+      setDaysUntilDue(rem !== null ? String(Math.max(0, rem)) : '');
+    }
+  };
+
+  const applyDaysPreset = (days: number | null) => {
+    if (days === null) {
+      setDueDate('');
+      setDaysUntilDue('');
+      if (!scheduleInCalendar) {
+        setStartDate('');
+      }
+    } else {
+      handleDaysUntilDueChange(String(days));
+    }
+  };
+
+  const handleToggleScheduleInCalendar = (checked: boolean) => {
+    setScheduleInCalendar(checked);
+    if (checked) {
+      if (!startDate) {
+        if (dueDate) {
+          const d = new Date(dueDate);
+          const s = new Date(d.getTime() - 60 * 60 * 1000);
+          setStartDate(toDatetimeLocalString(s.toISOString()));
+        } else {
+          const now = new Date();
+          now.setMinutes(0, 0, 0);
+          now.setHours(now.getHours() + 1);
+          setStartDate(toDatetimeLocalString(now.toISOString()));
+          const end = new Date(now.getTime() + 60 * 60 * 1000);
+          setDueDate(toDatetimeLocalString(end.toISOString()));
+          const rem = getCalendarDaysRemaining(end);
+          setDaysUntilDue(rem !== null ? String(Math.max(0, rem)) : '');
+        }
+      }
+    } else {
+      setStartDate('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -159,6 +246,13 @@ export default function TaskFormDialog({
     if (!subjectId) {
       setError('Wybierz przedmiot');
       return;
+    }
+
+    if (scheduleInCalendar && startDate && dueDate) {
+      if (new Date(dueDate).getTime() < new Date(startDate).getTime()) {
+        setError('Termin zakończenia w kalendarzu nie może być wcześniejszy niż data rozpoczęcia');
+        return;
+      }
     }
 
     const calcEstimatedMinutes = Math.max(0, (estimatedHours * 60) + estimatedMinutes);
@@ -171,8 +265,8 @@ export default function TaskFormDialog({
       description: description.trim() || null,
       subjectId,
       categoryId: categoryId ? categoryId : null,
-      startDate: hasDueDate && startDate ? new Date(startDate).toISOString() : null,
-      dueDate: hasDueDate && dueDate ? new Date(dueDate).toISOString() : null,
+      startDate: scheduleInCalendar && startDate ? new Date(startDate).toISOString() : null,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       storyPoints,
       status,
       priorityOverride: priorityOverride === 'AUTO' ? null : priorityOverride,
@@ -384,46 +478,156 @@ export default function TaskFormDialog({
               />
             </Box>
 
-            {/* Start and Due Date */}
-            <Box>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Terminy i czas w kalendarzu
-                </Typography>
-                <Button
-                  size="small"
-                  variant="text"
-                  onClick={() => setHasDueDate(!hasDueDate)}
-                >
-                  {hasDueDate ? 'Usuń terminy (bez terminu)' : 'Ustaw terminy'}
-                </Button>
+            {/* Termin zadania (Deadline) & opcjonalny kalendarz */}
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: '#f8fafc',
+                borderRadius: 2,
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CalendarMonthIcon color="primary" fontSize="small" />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                    Termin wykonania (Deadline)
+                  </Typography>
+                </Stack>
+                {(dueDate || daysUntilDue || startDate) && (
+                  <Button
+                    size="small"
+                    variant="text"
+                    color="secondary"
+                    onClick={() => applyDaysPreset(null)}
+                    sx={{ textTransform: 'none', py: 0, fontSize: '0.8rem' }}
+                  >
+                    Wyczyść termin (bez terminu)
+                  </Button>
+                )}
               </Stack>
 
-              {hasDueDate ? (
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <TextField
-                    label="Data i godzina rozpoczęcia"
-                    type="datetime-local"
-                    fullWidth
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    helperText="Początek pracy nad zadaniem"
-                  />
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={7}>
                   <TextField
                     label="Termin zakończenia (deadline)"
                     type="datetime-local"
                     fullWidth
+                    size="small"
                     value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
+                    onChange={(e) => handleDueDateChange(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    helperText="Wymagany do klasyfikacji w macierzy"
+                    helperText={
+                      dueDate
+                        ? 'Wymagany do automatycznej klasyfikacji pilności w macierzy'
+                        : 'Domyślnie brak terminu (zadanie niepilne)'
+                    }
                   />
-                </Stack>
-              ) : (
-                <Alert severity="info" variant="outlined">
-                  Zadanie bez terminu nie jest uznawane za pilne w macierzy Eisenhowera.
-                </Alert>
+                </Grid>
+                <Grid item xs={12} sm={5}>
+                  <TextField
+                    label="Ile dni na zakończenie"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    value={daysUntilDue}
+                    onChange={(e) => handleDaysUntilDueChange(e.target.value)}
+                    placeholder="Domyślnie puste"
+                    InputProps={{
+                      inputProps: { min: 0 },
+                      endAdornment: <InputAdornment position="end">dni</InputAdornment>,
+                    }}
+                    helperText={
+                      daysUntilDue !== ''
+                        ? Number(daysUntilDue) === 0
+                          ? 'Termin przypada dzisiaj'
+                          : `Deadline za ${daysUntilDue} ${Number(daysUntilDue) === 1 ? 'dzień' : 'dni'}`
+                        : 'Liczba dni od dzisiaj'
+                    }
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Szybki wybór liczby dni */}
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1.5, gap: 0.75, alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  Szybki wybór:
+                </Typography>
+                {[
+                  { label: 'Dzisiaj', days: 0 },
+                  { label: 'Jutro', days: 1 },
+                  { label: 'Za 3 dni', days: 3 },
+                  { label: 'Za tydzień (7 dni)', days: 7 },
+                  { label: 'Za 2 tyg. (14 dni)', days: 14 },
+                ].map((preset) => {
+                  const isSelected = daysUntilDue === String(preset.days);
+                  return (
+                    <Chip
+                      key={preset.days}
+                      label={preset.label}
+                      size="small"
+                      variant={isSelected ? 'filled' : 'outlined'}
+                      color={isSelected ? 'primary' : 'default'}
+                      onClick={() => applyDaysPreset(preset.days)}
+                      clickable
+                      sx={{
+                        fontSize: '0.75rem',
+                        height: 24,
+                        fontWeight: isSelected ? 700 : 500,
+                      }}
+                    />
+                  );
+                })}
+              </Stack>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Opcja: Zaplanuj konkretny czas w kalendarzu */}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={scheduleInCalendar}
+                    onChange={(e) => handleToggleScheduleInCalendar(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Ustaw konkretne godziny w kalendarzu
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      Opcjonalnie: zablokuj przedział czasowy (od - do) w kalendarzu
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              {scheduleInCalendar && (
+                <Box sx={{ mt: 1.5, p: 1.5, bgcolor: '#ffffff', borderRadius: 1.5, border: '1px dashed #cbd5e1' }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                      label="Data i godzina rozpoczęcia"
+                      type="datetime-local"
+                      fullWidth
+                      size="small"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      helperText="Początek pracy / bloku w kalendarzu"
+                    />
+                    <TextField
+                      label="Data i godzina zakończenia"
+                      type="datetime-local"
+                      fullWidth
+                      size="small"
+                      value={dueDate}
+                      onChange={(e) => handleDueDateChange(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      helperText="Koniec pracy / bloku w kalendarzu"
+                    />
+                  </Stack>
+                </Box>
               )}
             </Box>
 
