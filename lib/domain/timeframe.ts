@@ -1,4 +1,5 @@
 import { getCalendarDaysRemaining } from './eisenhower';
+import { TaskStatus } from '@prisma/client';
 
 export interface TimeframePeriod {
   key: string;
@@ -135,35 +136,117 @@ export function generateTimeframePeriods(options: GenerateTimeframeOptions): Tim
 }
 
 /**
+ * Returns the start of the week (Monday 00:00:00.000) for a given reference date.
+ */
+export function getStartOfWeek(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getDay(); // 0 is Sunday, 1 is Monday...
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  date.setDate(date.getDate() + diffToMonday);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+export interface TaskTimeframeMeta {
+  dueDate?: Date | string | null;
+  status?: TaskStatus | string | null;
+  completedAt?: Date | string | null;
+}
+
+/**
  * Checks whether a task falls within the selected timeframe period.
+ *
+ * Rules for completed tasks (status === 'DONE'):
+ * - Completed tasks are NEVER overdue (never appear in 'overdue').
+ * - Once completed in a given week, they MUST NOT appear in subsequent / future weeks ('period_1', 'period_2', etc.).
+ * - In 'current' (current week), only tasks completed within the current week appear (tasks completed in previous weeks are hidden).
+ * - In 'all' (all terms), all tasks including completed are visible.
  */
 export function isTaskInTimeframe(
-  dueDate: Date | string | null | undefined,
+  dueDateOrTask: Date | string | null | undefined | TaskTimeframeMeta,
   selectedPeriodKey: string,
   horizonDays: number,
   periods: TimeframePeriod[],
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  explicitStatus?: TaskStatus | string | null,
+  explicitCompletedAt?: Date | string | null
 ): boolean {
   if (selectedPeriodKey === 'all') {
     return true;
   }
 
-  if (selectedPeriodKey === 'no_date') {
-    return dueDate === null || dueDate === undefined;
+  // Extract task properties
+  let dueDate: Date | string | null | undefined;
+  let status: TaskStatus | string | null | undefined = explicitStatus;
+  let completedAt: Date | string | null | undefined = explicitCompletedAt;
+
+  if (
+    typeof dueDateOrTask === 'object' &&
+    dueDateOrTask !== null &&
+    !(dueDateOrTask instanceof Date)
+  ) {
+    dueDate = dueDateOrTask.dueDate;
+    if (status === undefined) status = dueDateOrTask.status;
+    if (completedAt === undefined) completedAt = dueDateOrTask.completedAt;
+  } else {
+    dueDate = dueDateOrTask as Date | string | null | undefined;
   }
 
-  const daysRemaining = getCalendarDaysRemaining(dueDate, referenceDate);
+  const isDone = status === TaskStatus.DONE || status === 'DONE';
 
+  // Completed tasks are never "overdue"
   if (selectedPeriodKey === 'overdue') {
+    if (isDone) return false;
+    const daysRemaining = getCalendarDaysRemaining(dueDate, referenceDate);
     return daysRemaining !== null && daysRemaining < 0;
   }
 
+  // Special filter: without due date
+  if (selectedPeriodKey === 'no_date') {
+    if (dueDate !== null && dueDate !== undefined) return false;
+    if (isDone) {
+      if (!completedAt) return true;
+      const compDate = new Date(completedAt);
+      const startOfWeek = getStartOfWeek(referenceDate);
+      return compDate >= startOfWeek;
+    }
+    return true;
+  }
+
+  // Handle completed tasks:
+  if (isDone) {
+    const period = periods.find((p) => p.key === selectedPeriodKey);
+
+    // Rule: Completed tasks must NOT appear in future weeks/periods ('period_1', 'period_2', etc.)
+    if (period && period.startDays !== null && period.startDays > 0) {
+      return false;
+    }
+
+    // In 'current' (Bieżący tydzień / okres):
+    if (selectedPeriodKey === 'current') {
+      if (completedAt) {
+        const compDate = new Date(completedAt);
+        if (!isNaN(compDate.getTime())) {
+          const startOfWeek = getStartOfWeek(referenceDate);
+          // Only show if completed within the current week (since Monday 00:00)
+          return compDate >= startOfWeek;
+        }
+      }
+      // If completedAt is not recorded, check if dueDate is within current week
+      const daysRemaining = getCalendarDaysRemaining(dueDate, referenceDate);
+      if (daysRemaining === null) return true;
+      return daysRemaining >= 0 && daysRemaining <= horizonDays;
+    }
+  }
+
+  // Active tasks (NEW, TODO, IN_PROGRESS):
+  const daysRemaining = getCalendarDaysRemaining(dueDate, referenceDate);
   if (daysRemaining === null) {
     return false;
   }
 
   if (selectedPeriodKey === 'current') {
-    // Default view: tasks due within horizonDays (including overdue tasks)
+    // Current period covers active tasks up to horizonDays (including overdue active tasks)
     return daysRemaining <= horizonDays;
   }
 
@@ -174,4 +257,5 @@ export function isTaskInTimeframe(
 
   return daysRemaining >= period.startDays && daysRemaining <= period.endDays;
 }
+
 

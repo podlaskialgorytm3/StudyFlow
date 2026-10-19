@@ -152,7 +152,7 @@ export default function TasksPage() {
       counts[period.key] = tasks.filter((t) => {
         if (selectedSubject !== 'ALL' && t.subjectId !== selectedSubject) return false;
         if (selectedCategory !== 'ALL' && t.categoryId !== selectedCategory) return false;
-        return isTaskInTimeframe(t.dueDate, period.key, settings.taskHorizonDays || 7, timeframePeriods);
+        return isTaskInTimeframe(t, period.key, settings.taskHorizonDays || 7, timeframePeriods);
       }).length;
     }
     return counts;
@@ -169,7 +169,7 @@ export default function TasksPage() {
         if (selectedSubject !== 'ALL' && t.subjectId !== selectedSubject) return false;
         if (selectedCategory !== 'ALL' && t.categoryId !== selectedCategory) return false;
         if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
-        if (!isTaskInTimeframe(t.dueDate, timeframeFilter, settings.taskHorizonDays || 7, timeframePeriods)) {
+        if (!isTaskInTimeframe(t, timeframeFilter, settings.taskHorizonDays || 7, timeframePeriods)) {
           return false;
         }
         if (search.trim()) {

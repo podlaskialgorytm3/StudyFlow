@@ -139,6 +139,45 @@ describe('Timeframe Domain Logic', () => {
       expect(isTaskInTimeframe(new Date(2026, 11, 20), 'all', 7, periods, refDate)).toBe(true);
       expect(isTaskInTimeframe(null, 'all', 7, periods, refDate)).toBe(true);
     });
+
+    it('does not show completed tasks in following weeks (period_1, period_2) even if dueDate was in that week', () => {
+      const taskCompletedThisWeekWithFutureDue = {
+        dueDate: new Date(2026, 9, 25), // due in Week 2
+        status: 'DONE',
+        completedAt: new Date(2026, 9, 14), // completed in current week
+      };
+
+      // In current week, it shows because it was completed this week
+      expect(isTaskInTimeframe(taskCompletedThisWeekWithFutureDue, 'current', 7, periods, refDate)).toBe(true);
+
+      // In following week (Week 2), it MUST NOT show up
+      expect(isTaskInTimeframe(taskCompletedThisWeekWithFutureDue, 'period_1', 7, periods, refDate)).toBe(false);
+      expect(isTaskInTimeframe(taskCompletedThisWeekWithFutureDue, 'period_2', 7, periods, refDate)).toBe(false);
+
+      // In "all", it shows up
+      expect(isTaskInTimeframe(taskCompletedThisWeekWithFutureDue, 'all', 7, periods, refDate)).toBe(true);
+    });
+
+    it('does not show tasks completed in a previous week in the current week', () => {
+      // refDate is Tuesday 13.10.2026 (Monday 12.10.2026 is start of current week)
+      const taskCompletedLastWeek = {
+        dueDate: new Date(2026, 9, 8),
+        status: 'DONE',
+        completedAt: new Date(2026, 9, 9), // Friday of previous week
+      };
+
+      // In current week, it MUST NOT show up because it was completed in the previous week
+      expect(isTaskInTimeframe(taskCompletedLastWeek, 'current', 7, periods, refDate)).toBe(false);
+
+      // In subsequent weeks, it MUST NOT show up
+      expect(isTaskInTimeframe(taskCompletedLastWeek, 'period_1', 7, periods, refDate)).toBe(false);
+
+      // Never shows in overdue
+      expect(isTaskInTimeframe(taskCompletedLastWeek, 'overdue', 7, periods, refDate)).toBe(false);
+
+      // Always shows in "all"
+      expect(isTaskInTimeframe(taskCompletedLastWeek, 'all', 7, periods, refDate)).toBe(true);
+    });
   });
 });
 
