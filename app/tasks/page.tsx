@@ -41,6 +41,8 @@ import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -55,6 +57,7 @@ import {
 } from '@/lib/domain/eisenhower';
 import {
   generateTimeframePeriods,
+  getChronologicalPeriods,
   isTaskInTimeframe,
   TimeframePeriod,
 } from '@/lib/domain/timeframe';
@@ -142,8 +145,43 @@ export default function TasksPage() {
     return generateTimeframePeriods({
       horizonDays: settings.taskHorizonDays || 7,
       tasksDueDates: tasks.map((t) => t.dueDate),
+      tasksCompletedDates: tasks.map((t) => t.completedAt),
     });
   }, [settings.taskHorizonDays, tasks]);
+
+  // Chronological week periods (for prev/next stepping)
+  const chronologicalPeriods = useMemo(() => {
+    return getChronologicalPeriods(timeframePeriods);
+  }, [timeframePeriods]);
+
+  const currentPeriodIndex = useMemo(() => {
+    return chronologicalPeriods.findIndex((p) => p.key === timeframeFilter);
+  }, [chronologicalPeriods, timeframeFilter]);
+
+  const canGoPrev = currentPeriodIndex > 0;
+  const canGoNext =
+    currentPeriodIndex !== -1 && currentPeriodIndex < chronologicalPeriods.length - 1;
+
+  const handlePrevPeriod = () => {
+    if (currentPeriodIndex > 0) {
+      setTimeframeFilter(chronologicalPeriods[currentPeriodIndex - 1].key);
+    } else if (currentPeriodIndex === -1) {
+      // If currently on special filter (all/overdue/no_date), go to past_1 or current
+      const pastOrCurrent =
+        chronologicalPeriods.find((p) => p.key === 'past_1') ||
+        chronologicalPeriods.find((p) => p.key === 'current') ||
+        chronologicalPeriods[0];
+      if (pastOrCurrent) setTimeframeFilter(pastOrCurrent.key);
+    }
+  };
+
+  const handleNextPeriod = () => {
+    if (currentPeriodIndex !== -1 && currentPeriodIndex < chronologicalPeriods.length - 1) {
+      setTimeframeFilter(chronologicalPeriods[currentPeriodIndex + 1].key);
+    } else if (currentPeriodIndex === -1) {
+      setTimeframeFilter('current');
+    }
+  };
 
   // Task count per timeframe period
   const taskCountsByTimeframe = useMemo(() => {
@@ -369,37 +407,92 @@ export default function TasksPage() {
               </FormControl>
             </Grid>
 
-            {/* Timeframe / Horizon filter */}
+            {/* Timeframe / Horizon filter with prev/next week buttons */}
             <Grid item xs={12} sm={12} md={5}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Termin / Okres zadania</InputLabel>
-                <Select
-                  value={timeframeFilter}
-                  label="Termin / Okres zadania"
-                  onChange={(e) => setTimeframeFilter(e.target.value)}
-                >
-                  {timeframePeriods.map((period) => (
-                    <MenuItem key={period.key} value={period.key}>
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        sx={{ width: '100%' }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: period.key === 'current' ? 700 : 500 }}>
-                          {period.label}
-                        </Typography>
-                        <Chip
-                          size="small"
-                          label={taskCountsByTimeframe[period.key] ?? 0}
-                          color={timeframeFilter === period.key ? 'primary' : 'default'}
-                          sx={{ ml: 1.5, height: 20, fontSize: '0.72rem', fontWeight: 700 }}
-                        />
-                      </Stack>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Tooltip title="Poprzedni tydzień / okres">
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handlePrevPeriod}
+                      disabled={!canGoPrev}
+                      aria-label="Poprzedni tydzień"
+                      sx={{
+                        border: '1px solid #cbd5e1',
+                        bgcolor: 'white',
+                        '&:hover': { bgcolor: '#f1f5f9' },
+                        height: 40,
+                        width: 40,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ChevronLeftIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <FormControl fullWidth size="small">
+                  <InputLabel>Termin / Okres zadania</InputLabel>
+                  <Select
+                    value={timeframeFilter}
+                    label="Termin / Okres zadania"
+                    onChange={(e) => setTimeframeFilter(e.target.value)}
+                  >
+                    {timeframePeriods.map((period) => (
+                      <MenuItem key={period.key} value={period.key}>
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          sx={{ width: '100%' }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight:
+                                period.key === 'current'
+                                  ? 700
+                                  : period.key.startsWith('past_')
+                                  ? 600
+                                  : 500,
+                              color: period.key.startsWith('past_') ? 'text.secondary' : 'inherit',
+                            }}
+                          >
+                            {period.label}
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={taskCountsByTimeframe[period.key] ?? 0}
+                            color={timeframeFilter === period.key ? 'primary' : 'default'}
+                            sx={{ ml: 1.5, height: 20, fontSize: '0.72rem', fontWeight: 700 }}
+                          />
+                        </Stack>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Tooltip title="Następny tydzień / okres">
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleNextPeriod}
+                      disabled={!canGoNext}
+                      aria-label="Następny tydzień"
+                      sx={{
+                        border: '1px solid #cbd5e1',
+                        bgcolor: 'white',
+                        '&:hover': { bgcolor: '#f1f5f9' },
+                        height: 40,
+                        width: 40,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ChevronRightIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Stack>
             </Grid>
 
             {/* Status filter */}
@@ -447,11 +540,29 @@ export default function TasksPage() {
               </Typography>
               <Chip
                 size="small"
-                color="primary"
+                color={timeframeFilter.startsWith('past_') ? 'secondary' : 'primary'}
                 variant="filled"
                 label={activePeriod?.label || 'Bieżący okres'}
                 sx={{ fontWeight: 700, fontSize: '0.75rem' }}
               />
+              {timeframeFilter !== 'current' && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setTimeframeFilter('current')}
+                  sx={{
+                    py: 0.2,
+                    px: 1,
+                    fontSize: '0.75rem',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    height: 24,
+                    borderColor: '#cbd5e1',
+                  }}
+                >
+                  Wróć do bieżącego tygodnia
+                </Button>
+              )}
               <Typography variant="caption" color="text.secondary">
                 (widoczne: {filteredTasks.length} {filteredTasks.length === 1 ? 'zadanie' : filteredTasks.length > 1 && filteredTasks.length < 5 ? 'zadania' : 'zadań'})
               </Typography>
