@@ -40,8 +40,8 @@ Domyślna zawartość pliku `.env` dla lokalnego środowiska Docker:
 ```env
 DATABASE_URL="postgresql://studyflow:studyflow_password@localhost:5432/studyflow_db?schema=public"
 SESSION_SECRET="studyflow_super_secret_jwt_key_must_be_at_least_32_characters_long_for_security"
-ADMIN_USERNAME="admin"
-ADMIN_PASSWORD="AdminPassword123!"
+ADMIN_USERNAME="*****"
+ADMIN_PASSWORD="*******"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
 # Google Calendar OAuth 2.0 (Google Cloud Console)
