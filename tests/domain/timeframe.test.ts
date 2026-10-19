@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   generateTimeframePeriods,
+  getChronologicalPeriods,
   isTaskInTimeframe,
   formatDatePl,
   addDays,
@@ -23,31 +24,42 @@ describe('Timeframe Domain Logic', () => {
   });
 
   describe('generateTimeframePeriods with 7 days (default week)', () => {
-    it('generates current week and subsequent weeks with expected labels and intervals', () => {
+    it('generates previous week, current week, and subsequent weeks with expected labels and intervals', () => {
       const periods = generateTimeframePeriods({
         horizonDays: 7,
         referenceDate: refDate,
         minPeriods: 4,
       });
 
-      expect(periods[0].key).toBe('current');
-      expect(periods[0].label).toBe('Bieżący tydzień: [13.10.2026 – 20.10.2026]');
-      expect(periods[0].endDays).toBe(7);
+      const pastPeriod = periods.find((p) => p.key === 'past_1');
+      expect(pastPeriod).toBeDefined();
+      expect(pastPeriod?.label).toBe('Poprzedni tydzień: [06.10.2026 – 12.10.2026]');
+      expect(pastPeriod?.startDays).toBe(-7);
+      expect(pastPeriod?.endDays).toBe(-1);
 
-      expect(periods[1].key).toBe('period_1');
-      expect(periods[1].label).toBe('Tydzień 2: [21.10.2026 – 27.10.2026]');
-      expect(periods[1].startDays).toBe(8);
-      expect(periods[1].endDays).toBe(14);
+      const currentPeriod = periods.find((p) => p.key === 'current');
+      expect(currentPeriod).toBeDefined();
+      expect(currentPeriod?.label).toBe('Bieżący tydzień: [13.10.2026 – 20.10.2026]');
+      expect(currentPeriod?.endDays).toBe(7);
 
-      expect(periods[2].key).toBe('period_2');
-      expect(periods[2].label).toBe('Tydzień 3: [28.10.2026 – 03.11.2026]');
-      expect(periods[2].startDays).toBe(15);
-      expect(periods[2].endDays).toBe(21);
+      const period1 = periods.find((p) => p.key === 'period_1');
+      expect(period1?.label).toBe('Tydzień 2: [21.10.2026 – 27.10.2026]');
+      expect(period1?.startDays).toBe(8);
+      expect(period1?.endDays).toBe(14);
 
-      expect(periods[3].key).toBe('period_3');
-      expect(periods[3].label).toBe('Tydzień 4: [04.11.2026 – 10.11.2026]');
-      expect(periods[3].startDays).toBe(22);
-      expect(periods[3].endDays).toBe(28);
+      const period2 = periods.find((p) => p.key === 'period_2');
+      expect(period2?.label).toBe('Tydzień 3: [28.10.2026 – 03.11.2026]');
+      expect(period2?.startDays).toBe(15);
+      expect(period2?.endDays).toBe(21);
+
+      const period3 = periods.find((p) => p.key === 'period_3');
+      expect(period3?.label).toBe('Tydzień 4: [04.11.2026 – 10.11.2026]');
+      expect(period3?.startDays).toBe(22);
+      expect(period3?.endDays).toBe(28);
+
+      // Check chronological order
+      const chrono = getChronologicalPeriods(periods);
+      expect(chrono.map((p) => p.key)).toEqual(['past_1', 'current', 'period_1', 'period_2', 'period_3']);
 
       // Check special options
       const allOption = periods.find((p) => p.key === 'all');
@@ -58,17 +70,21 @@ describe('Timeframe Domain Logic', () => {
       expect(noDateOption).toBeDefined();
     });
 
-    it('dynamically expands periods if tasks are scheduled further in the future', () => {
+    it('dynamically expands periods if tasks are scheduled further in the future or past', () => {
       const farDueDate = new Date(2026, 11, 15); // Dec 15, 2026 (~63 days away)
+      const oldCompletedDate = new Date(2026, 8, 15); // Sep 15, 2026 (~28 days ago)
       const periods = generateTimeframePeriods({
         horizonDays: 7,
         tasksDueDates: [farDueDate],
+        tasksCompletedDates: [oldCompletedDate],
         referenceDate: refDate,
       });
 
-      // 63 days / 7 = 9 periods
-      const weekPeriods = periods.filter((p) => p.key.startsWith('period_') || p.key === 'current');
-      expect(weekPeriods.length).toBeGreaterThanOrEqual(9);
+      const futurePeriods = periods.filter((p) => p.key.startsWith('period_'));
+      expect(futurePeriods.length).toBeGreaterThanOrEqual(8);
+
+      const pastPeriods = periods.filter((p) => p.key.startsWith('past_'));
+      expect(pastPeriods.length).toBeGreaterThanOrEqual(4);
     });
   });
 
@@ -80,14 +96,19 @@ describe('Timeframe Domain Logic', () => {
         minPeriods: 3,
       });
 
-      expect(periods[0].key).toBe('current');
-      expect(periods[0].label).toBe('Bieżący okres (5 dni): [13.10.2026 – 18.10.2026]');
-      expect(periods[0].endDays).toBe(5);
+      const pastPeriod = periods.find((p) => p.key === 'past_1');
+      expect(pastPeriod?.label).toBe('Poprzedni okres (5 dni): [08.10.2026 – 12.10.2026]');
+      expect(pastPeriod?.startDays).toBe(-5);
+      expect(pastPeriod?.endDays).toBe(-1);
 
-      expect(periods[1].key).toBe('period_1');
-      expect(periods[1].label).toBe('Okres 2 (5 dni): [19.10.2026 – 23.10.2026]');
-      expect(periods[1].startDays).toBe(6);
-      expect(periods[1].endDays).toBe(10);
+      const currentPeriod = periods.find((p) => p.key === 'current');
+      expect(currentPeriod?.label).toBe('Bieżący okres (5 dni): [13.10.2026 – 18.10.2026]');
+      expect(currentPeriod?.endDays).toBe(5);
+
+      const period1 = periods.find((p) => p.key === 'period_1');
+      expect(period1?.label).toBe('Okres 2 (5 dni): [19.10.2026 – 23.10.2026]');
+      expect(period1?.startDays).toBe(6);
+      expect(period1?.endDays).toBe(10);
     });
   });
 
@@ -177,6 +198,38 @@ describe('Timeframe Domain Logic', () => {
 
       // Always shows in "all"
       expect(isTaskInTimeframe(taskCompletedLastWeek, 'all', 7, periods, refDate)).toBe(true);
+
+      // Shows in "past_1" (previous week)
+      expect(isTaskInTimeframe(taskCompletedLastWeek, 'past_1', 7, periods, refDate)).toBe(true);
+    });
+
+    it('correctly filters tasks in past week view (past_1)', () => {
+      const taskCompletedLastWeek = {
+        dueDate: new Date(2026, 9, 8),
+        status: 'DONE',
+        completedAt: new Date(2026, 9, 9), // Friday of previous week
+      };
+      const taskCompletedThisWeek = {
+        dueDate: new Date(2026, 9, 15),
+        status: 'DONE',
+        completedAt: new Date(2026, 9, 13), // Tuesday of current week
+      };
+      const activeOverdueFromLastWeek = {
+        dueDate: new Date(2026, 9, 10), // Saturday of previous week (-3 days)
+        status: 'TODO',
+      };
+
+      // Past completed task appears in past_1
+      expect(isTaskInTimeframe(taskCompletedLastWeek, 'past_1', 7, periods, refDate)).toBe(true);
+
+      // Current completed task does NOT appear in past_1
+      expect(isTaskInTimeframe(taskCompletedThisWeek, 'past_1', 7, periods, refDate)).toBe(false);
+
+      // Active overdue task from last week appears in past_1, current, and overdue
+      expect(isTaskInTimeframe(activeOverdueFromLastWeek, 'past_1', 7, periods, refDate)).toBe(true);
+      expect(isTaskInTimeframe(activeOverdueFromLastWeek, 'current', 7, periods, refDate)).toBe(true);
+      expect(isTaskInTimeframe(activeOverdueFromLastWeek, 'overdue', 7, periods, refDate)).toBe(true);
+      expect(isTaskInTimeframe(activeOverdueFromLastWeek, 'period_1', 7, periods, refDate)).toBe(false);
     });
   });
 });
